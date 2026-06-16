@@ -1,0 +1,49 @@
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+INPUT_DIR = BASE_DIR / "input"
+RESULTS_DIR = BASE_DIR / "results"
+CARDS_DIR = RESULTS_DIR / "cards"
+JSON_DIR = RESULTS_DIR / "json"
+TXT_DIR = RESULTS_DIR / "txt"
+OCR_OUT_DIR = RESULTS_DIR / "ocr_output"
+AVATARS_DIR = RESULTS_DIR / "avatars"
+DEBUG_DIR = RESULTS_DIR / "debug"
+
+for folder in [INPUT_DIR, RESULTS_DIR, CARDS_DIR, JSON_DIR, TXT_DIR, 
+               OCR_OUT_DIR, AVATARS_DIR, DEBUG_DIR]:
+    folder.mkdir(parents=True, exist_ok=True)
+
+TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+OCR_ENGINE = "easyocr"
+OCR_LANG = ["vi", "en"]
+OCR_USE_GPU = False
+CONF_THRESHOLD = 0.50
+
+CARD_WIDTH = 860
+CARD_HEIGHT = 542
+
+BLUR_THRESHOLD = 80.0
+BRIGHTNESS_MIN = 40
+BRIGHTNESS_MAX = 220
+MIN_IMAGE_SIZE = 480
+
+CARD_AREA_MIN_RATIO = 0.05
+CARD_AREA_MAX_RATIO = 0.95
+ASPECT_MIN = 1.20
+ASPECT_MAX = 1.90
+
+CLAHE_CLIP_LIMIT = 2.0
+CLAHE_TILE_GRID = (8, 8)
+BILATERAL_D = 9
+BILATERAL_SIGMA_COLOR = 75
+BILATERAL_SIGMA_SPACE = 75
+ADAPTIVE_BLOCK_SIZE = 11
+ADAPTIVE_C = 2
+
+FIELD_PADDING = 0.02
+
+SAVE_DEBUG_IMAGES = True
+DRAW_BOXES_ON_DEBUG = True

@@ -1,0 +1,8 @@
+so_cccd: 
+ho_ten: I
+ngay_sinh: 
+gioi_tinh: M
+quoc_tich: VN
+que_quan: YOAXAI
+noi_ctru: 
+ngay_het_han: 
