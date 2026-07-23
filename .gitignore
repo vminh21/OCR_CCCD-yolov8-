@@ -1,4 +1,6 @@
+# ===========================
 # Python
+# ===========================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -10,57 +12,88 @@ build/
 .eggs/
 .Python
 
+# ===========================
 # Virtual Environment
+# ===========================
 .venv/
 venv/
 env/
 ENV/
 
-# Model weights (too large for git)
-models/*.pt
-models/*.pth
-models/*.onnx
-yolov8n.pt
+# ===========================
+# Model Weights (file lớn, không commit)
+# ===========================
+models/
 *.pt
 *.pth
 *.onnx
+*.bin
+*.weights
+yolov8n.pt
 
-# Data directories (may contain sensitive CCCD images)
+# ===========================
+# Dữ liệu ảnh (bảo mật CCCD)
+# ===========================
 input/
 output/
-results/
 data/
 word/
-runs/
 
-# YOLOv8 training artifacts
+# ===========================
+# Kết quả xử lý (auto-generated)
+# ===========================
+results/
+
+# ===========================
+# YOLOv8 / Training artifacts
+# ===========================
+runs/
 id-card-side-object-detection-1/
 
+# ===========================
+# macOS
+# ===========================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ===========================
 # IDE
+# ===========================
 .idea/
 .vscode/
 *.swp
 *.swo
+*.swa
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
+# ===========================
 # Jupyter Notebook
-.ipynb_checkpoints
+# ===========================
+.ipynb_checkpoints/
+*.ipynb
 
-# Logs
+# ===========================
+# Logs & Debug
+# ===========================
 *.log
 logs/
+debug/
 
-# Environment variables
+# ===========================
+# Environment / Secrets
+# ===========================
 .env
-.env.local
+.env.*
+*.env
+secrets.py
 
-# EasyOCR model cache
-~/.EasyOCR/
-
-# Temp files
+# ===========================
+# Temp & Cache
+# ===========================
 *.tmp
 *.bak
+*.cache
+.cache/
+tmp/
+temp/

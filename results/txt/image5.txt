@@ -1,8 +1,0 @@
-so_cccd: 
-ho_ten: LWIVBITUOSU
-ngay_sinh: 
-gioi_tinh: M
-quoc_tich: I
-que_quan: 
-noi_ctru: 
-ngay_het_han: 
