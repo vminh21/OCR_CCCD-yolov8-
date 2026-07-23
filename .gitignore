@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Model weights (too large for git)
+models/*.pt
+models/*.pth
+models/*.onnx
+yolov8n.pt
+*.pt
+*.pth
+*.onnx
+
+# Data directories (may contain sensitive CCCD images)
+input/
+output/
+results/
+data/
+word/
+runs/
+
+# YOLOv8 training artifacts
+id-card-side-object-detection-1/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# EasyOCR model cache
+~/.EasyOCR/
+
+# Temp files
+*.tmp
+*.bak
