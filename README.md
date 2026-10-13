@@ -1,3 +1,15 @@
+---
+title: CCCD OCR
+emoji: 🪪
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 5.20.0
+app_file: app.py
+pinned: false
+license: apache-2.0
+---
+
 # 🪪 CCCD OCR — Hệ Thống Nhận Diện & Trích Xuất Thẻ Căn Cước Công Dân
 
 <div align="center">
