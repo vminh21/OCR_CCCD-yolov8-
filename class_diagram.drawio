@@ -1,0 +1,77 @@
+<mxfile host="app.diagrams.net" modified="2026-10-01T07:50:00.000Z" agent="Antigravity" version="21.6.8" type="device">
+  <diagram id="class-diagram-cccd" name="Biểu đồ lớp - OCR CCCD">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- 1. CCCDCard (Doi tuong the trung tam) -->
+        <mxCell id="cls_cccd" value="CCCDCard&#xa;--&#xa;-idNumber: string&#xa;-fullName: string&#xa;-dateOfBirth: Date&#xa;-residence: string&#xa;-isVerified: Boolean&#xa;--&#xa;+updateInfo(fields)&#xa;+validateFields(): Boolean&#xa;+reset()" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="40" width="220" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- 2. DetectionResult (Chat luong va Vung phat hien) -->
+        <mxCell id="cls_detect" value="DetectionResult&#xa;--&#xa;-rawImage: Image&#xa;-detectedCard: Rect&#xa;-confidenceScore: float&#xa;--&#xa;+checkQuality(): Boolean&#xa;+getConfidence(): float&#xa;+isReliable(): Boolean" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="270" width="200" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- 3. OCRProcess (Pipeline AI) -->
+        <mxCell id="cls_process" value="OCRProcess&#xa;--&#xa;-stepList: List&lt;Step&gt;&#xa;-totalSteps: integer&#xa;-isCompleted: Boolean&#xa;--&#xa;+executePipeline(image): Boolean&#xa;+getNextStep()&#xa;+getTotalSteps(): integer" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="280" width="220" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- 4. ProcessingStep (Tung buoc xu ly) -->
+        <mxCell id="cls_step" value="ProcessingStep&#xa;--&#xa;-stepName: string&#xa;-orderIndex: integer&#xa;--&#xa;+getStepName(): string&#xa;+getIllustration(): Image" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="720" y="300" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- 5. User (Quan ly tai khoan) -->
+        <mxCell id="cls_user" value="User&#xa;--&#xa;-userId: integer&#xa;-username: string&#xa;-email: string&#xa;-fullName: string&#xa;-createdAt: DateTime&#xa;--&#xa;+login(user, pass)&#xa;+changePassword(old, new)&#xa;+logout()" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="70" y="550" width="210" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- 6. ScanHistory (Lich su va Thung rac xoa) -->
+        <mxCell id="cls_history" value="ScanHistory&#xa;--&#xa;-scanDate: DateTime&#xa;-processingTime: float&#xa;-status: string&#xa;--&#xa;+saveRecord()&#xa;+getScanDetails()&#xa;+deleteRecord(id): Boolean" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="550" width="220" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- 7. Statistics (Thong ke) -->
+        <mxCell id="cls_stats" value="Statistics&#xa;--&#xa;-totalScans: integer&#xa;-averageTime: float&#xa;-accuracyRate: float&#xa;--&#xa;+calculateAverage()&#xa;+findBestAccuracy(): float&#xa;+updateStats()" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="720" y="550" width="220" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- Cac duong ket noi (Edges) -->
+        <!-- DetectionResult to CCCDCard -->
+        <mxCell id="e_detect_cccd" style="endArrow=open;dashed=1;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=0;entryX=0;entryY=0.5;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="cls_detect" target="cls_cccd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- OCRProcess to CCCDCard -->
+        <mxCell id="e_proc_cccd" style="endArrow=block;dashed=1;endFill=0;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="cls_process" target="cls_cccd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- OCRProcess to ProcessingStep (Composition 1 to 1..*) -->
+        <mxCell id="e_comp_step" value="1               1..*" style="endArrow=none;startArrow=diamond;startFill=1;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="cls_process" target="cls_step">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- OCRProcess to ScanHistory (1 to 1) -->
+        <mxCell id="e_proc_hist" value="1&#xa;&#xa;1" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="cls_process" target="cls_history">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- User to ScanHistory (1 to 0..*) -->
+        <mxCell id="e_user_hist" value="1               0..*" style="endArrow=none;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="cls_user" target="cls_history">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ScanHistory to Statistics (Aggregation 0..* to 1) -->
+        <mxCell id="e_hist_stats" value="0..*            1" style="endArrow=none;startArrow=diamond;startFill=0;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="cls_history" target="cls_stats">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -10,19 +10,18 @@ from config.settings import (
     AVATARS_DIR,
     TXT_DIR
 )
-from config.field_templates import CCCD_FRONT_FIELDS
 try:
     from config.field_templates import AVATAR_COORDS
 except ImportError:
     AVATAR_COORDS = None
 
-from src.quality_check import check_quality
-from src.detector_yolo import detect_and_crop_card
-from src.enhancer import enhance_card
-from src.extractor_yolo import extract_fields_yolo
-from src.extractor import extract_avatar, save_avatar
-from src.ocr_engine import read_all_fields
-from src.validator import validate_results
+from src.core.quality_check import check_quality
+from src.detectors.card_detector import detect_and_crop_card
+from src.core.enhancer import enhance_card
+from src.detectors.field_detector import extract_fields_yolo, fix_card_orientation
+from src.core.avatar_extractor import extract_avatar, save_avatar
+from src.ocr.ocr_engine import read_all_fields
+from src.core.validator import validate_results
 
 
 def save_json(data, output_path):
@@ -55,12 +54,14 @@ def process_cccd(image_path):
     print("[2/7] Detecting & Cropping Card (YOLO)...")
     try:
         card_crop = detect_and_crop_card(image)
+        card_crop = fix_card_orientation(card_crop)
         # Lưu lại ảnh thẻ đã cắt
         cv2.imwrite(str(CARDS_DIR / f"{image_path.stem}_card.jpg"), card_crop)
+    except ValueError:
+        raise
     except Exception as e:
-        # BẮT LỖI TẠI ĐÂY: Dừng hoàn toàn nếu không thấy thẻ hoặc up nhầm mặt sau
         print(f"❌ Dừng xử lý Stage 1: {e}")
-        return None 
+        raise ValueError("Sai định dạng CCCD! Hệ thống chỉ hỗ trợ thẻ Căn cước công dân gắn chip chuẩn mới nhất.")
 
     # 4. ENHANCE IMAGE
     print("[3/7] Enhancing image...")
@@ -69,8 +70,9 @@ def process_cccd(image_path):
 
     # 5. STAGE 2: EXTRACT FIELDS (YOLO)
     print("[4/7] Extracting data...")
-    # SỬA Ở ĐÂY: Truyền đúng biến 'enhanced' vào
-    field_images = extract_fields_yolo(card_crop) 
+    field_images = extract_fields_yolo(enhanced)
+    if not field_images or len(field_images) < 2 or ('so_cccd' not in field_images and 'ho_ten' not in field_images):
+        raise ValueError("Sai định dạng CCCD! Hệ thống chỉ hỗ trợ thẻ Căn cước công dân gắn chip chuẩn mới nhất.")
 
     # Extract Avatar (if configured)
     if AVATAR_COORDS:
@@ -90,10 +92,27 @@ def process_cccd(image_path):
     print("[6/7] Validating data...")
     final_data = validate_results(ocr_results)
 
+    # 7.1 Kiểm tra xem có phải nội dung mặt sau thẻ CCCD
+    all_raw_text = " ".join([str(v) for v in ocr_results.values()]).lower()
+    back_keywords = ["đặc điểm", "nhân dạng", "ngón trỏ", "ngon tro", "cục cảnh sát", "giám đốc công an", "idvnm", "<<"]
+    if any(kw in all_raw_text for kw in back_keywords):
+        raise ValueError("Đây là mặt sau của CCCD. Chúng tôi chỉ trích xuất kết quả của mặt trước!")
+
+    # 7.2 Kiểm tra chuẩn CCCD mới nhất (12 chữ số)
+    so_cccd = final_data.get("so_cccd", "").strip()
+    if not so_cccd or len(so_cccd) != 12:
+        if so_cccd and len(so_cccd) == 9:
+            raise ValueError("Sai định dạng CCCD! Ảnh tải lên là CMND 9 số cũ. Hệ thống chỉ hỗ trợ thẻ Căn cước công dân gắn chip chuẩn mới nhất (12 chữ số).")
+        raise ValueError("Sai định dạng CCCD! Hệ thống chỉ hỗ trợ thẻ Căn cước công dân gắn chip chuẩn mới nhất (Số CCCD phải đủ 12 chữ số).")
+
+    ho_ten = final_data.get("ho_ten", "").strip()
+    if not ho_ten or len(ho_ten) < 2:
+        raise ValueError("Sai định dạng CCCD! Không nhận diện được họ và tên hợp lệ của thẻ CCCD.")
+
     # 8. SAVE RESULTS
     print("[7/7] Saving results...")
     save_json(final_data, JSON_DIR / f"{image_path.stem}.json")
     save_text(final_data, TXT_DIR / f"{image_path.stem}.txt")
-    print(f"✅ HOÀN TẤT: Kết quả lưu tại {JSON_DIR.name}/ và {TXT_DIR.name}/")
+    print(f"✅ HOÀN TẤT: Kết quả lưu tại: {JSON_DIR} và {TXT_DIR}")
 
     return final_data
