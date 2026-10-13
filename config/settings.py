@@ -2,24 +2,27 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-INPUT_DIR = BASE_DIR / "input"
-RESULTS_DIR = BASE_DIR / "results"
-CARDS_DIR = RESULTS_DIR / "cards"
-JSON_DIR = RESULTS_DIR / "json"
-TXT_DIR = RESULTS_DIR / "txt"
-OCR_OUT_DIR = RESULTS_DIR / "ocr_output"
-AVATARS_DIR = RESULTS_DIR / "avatars"
-DEBUG_DIR = RESULTS_DIR / "debug"
+# SOTA Workspace Paths
+WEIGHTS_DIR = BASE_DIR / "weights"
+MODEL_STAGE1_PATH = WEIGHTS_DIR / "yolov8_cccd_detect.pt"
+MODEL_STAGE2_PATH = WEIGHTS_DIR / "yolov8_fields.pt"
+MODEL_VIETOCR_WEIGHTS_PATH = WEIGHTS_DIR / "vgg_transformer.pth"
+MODEL_VIETOCR_CONFIG_PATH = BASE_DIR / "config" / "vgg_transformer.yml"
 
-for folder in [INPUT_DIR, RESULTS_DIR, CARDS_DIR, JSON_DIR, TXT_DIR, 
-               OCR_OUT_DIR, AVATARS_DIR, DEBUG_DIR]:
+DATA_DIR = BASE_DIR / "data"
+INPUT_DIR = DATA_DIR / "input"
+OUTPUT_DIR = DATA_DIR / "output"
+CARDS_DIR = OUTPUT_DIR / "cards"
+JSON_DIR = OUTPUT_DIR / "json"
+TXT_DIR = OUTPUT_DIR / "txt"
+OCR_OUT_DIR = OUTPUT_DIR / "ocr_output"
+AVATARS_DIR = OUTPUT_DIR / "avatars"
+DEBUG_DIR = OUTPUT_DIR / "debug"
+
+for folder in [WEIGHTS_DIR, DATA_DIR, INPUT_DIR, OUTPUT_DIR, CARDS_DIR, JSON_DIR, TXT_DIR, OCR_OUT_DIR, AVATARS_DIR, DEBUG_DIR]:
     folder.mkdir(parents=True, exist_ok=True)
 
-TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-OCR_ENGINE = "easyocr"
-OCR_LANG = ["vi", "en"]
-OCR_USE_GPU = False
+OCR_ENGINE = "vietocr"
 CONF_THRESHOLD = 0.50
 
 CARD_WIDTH = 860

@@ -1,0 +1,106 @@
+<mxfile host="app.diagrams.net" modified="2026-10-01T14:50:00.000Z" agent="Antigravity" version="21.6.8" type="device">
+  <diagram id="state-diagram-cccd" name="Biểu đồ trạng thái - OCR CCCD">
+    <mxGraphModel dx="1000" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="800" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Initial State -->
+        <mxCell id="st_init" value="" style="ellipse;fillColor=#000000;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="385" y="40" width="30" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- State 1: Chờ nhận diện -->
+        <mxCell id="st_cho_nd" value="Chờ nhận diện" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="110" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- State 2: Đang nhận diện -->
+        <mxCell id="st_dang_nd" value="Đang nhận diện" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="230" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- State 3: Nhận diện không hợp lệ -->
+        <mxCell id="st_khong_hl" value="Nhận diện không&#xa;hợp lệ" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="150" y="370" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- State 4: Nhận diện thành công -->
+        <mxCell id="st_thanh_cong" value="Nhận diện thành&#xa;công" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="460" y="460" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- State 5: Bắt đầu trích xuất -->
+        <mxCell id="st_bat_dau_tx" value="Bắt đầu trích xuất" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="590" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- State 6: Trích xuất hoàn tất -->
+        <mxCell id="st_trich_xuat_tc" value="Trích xuất hoàn tất" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="720" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- State 7: Hiển thị thông tin chi tiết -->
+        <mxCell id="st_hien_thi" value="Hiển thị thông tin&#xa;chi tiết" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="850" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- State 8: Hoàn thành -->
+        <mxCell id="st_hoan_thanh" value="Hoàn thành" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontFamily=Helvetica;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="980" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Final State -->
+        <mxCell id="st_final" value="" style="ellipse;shape=endState;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="385" y="1090" width="30" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- TRANSITIONS / EDGES -->
+        <mxCell id="e1" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="st_init" target="st_cho_nd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" value="Bắt đầu chụp / tải" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_cho_nd" target="st_dang_nd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" value="Ảnh mờ / chói sáng" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.2;exitY=1;entryX=0.5;entryY=0;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_dang_nd" target="st_khong_hl">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e4" value="Chụp lại" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.7;exitY=0;entryX=0.4;entryY=1;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_khong_hl" target="st_dang_nd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" value="Hợp lệ" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=1;exitY=0.5;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;curved=1;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_dang_nd" target="st_thanh_cong">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" value="Sửa thủ công" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0;entryY=0.5;edgeStyle=orthogonalEdgeStyle;curved=1;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_khong_hl" target="st_thanh_cong">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e7" value="Nhấn trích xuất" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.7;entryY=0;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_thanh_cong" target="st_bat_dau_tx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e8" value="Tính toán xong" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_bat_dau_tx" target="st_trich_xuat_tc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e9" value="Xem hướng dẫn / kết quả" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_trich_xuat_tc" target="st_hien_thi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e10" value="Xử lý xong" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=11;fontFamily=Helvetica;" edge="1" parent="1" source="st_hien_thi" target="st_hoan_thanh">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e11" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=1.2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="st_hoan_thanh" target="st_final">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

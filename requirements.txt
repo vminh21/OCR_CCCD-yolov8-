@@ -1,0 +1,15 @@
+torch>=2.0.0
+torchvision>=0.15.0
+ultralytics>=8.0.0
+vietocr>=0.3.0
+opencv-python>=4.8.0
+pillow>=9.0.0
+fastapi>=0.100.0
+python-multipart>=0.0.6
+uvicorn>=0.20.0
+numpy<2.0.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+bcrypt>=4.0.0
+pyjwt>=2.8.0
+python-dotenv>=1.0.0
