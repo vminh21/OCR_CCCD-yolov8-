@@ -217,6 +217,16 @@ def calculate_alignment_score(box):
     return conf * ar_score
 
 
+
+def safe_predict(m, i, **kw):
+    try:
+        return m(i, **kw)
+    except Exception:
+        kw_cpu = dict(kw)
+        kw_cpu["device"] = "cpu"
+        return m(i, **kw_cpu)
+
+
 def detect_and_crop_card(image):
     """
     TỰ ĐỘNG PHÁT HIỆN & CẮT NẮN THẺ CCCD Ở MỌI GÓC NGHIÊNG (0°, 30°, 45°, 60°, 90°, 180°, 270°...):
@@ -258,7 +268,7 @@ def detect_and_crop_card(image):
                     best_back_box = b
 
     # Bước 1: Thử góc 0° (ảnh thẳng)
-    res_0 = model(img, conf=0.15, verbose=False)
+    res_0 = safe_predict(model, img, conf=0.15, verbose=False)
     if len(res_0) > 0 and len(res_0[0].boxes) > 0:
         evaluate_boxes(res_0[0].boxes, img)
 
@@ -271,7 +281,7 @@ def detect_and_crop_card(image):
         ]
         for angle, rot_img in ortho_candidates:
             try:
-                results = model(rot_img, conf=0.15, verbose=False)
+                results = safe_predict(model, rot_img, conf=0.15, verbose=False)
                 if len(results) > 0 and len(results[0].boxes) > 0:
                     evaluate_boxes(results[0].boxes, rot_img)
             except Exception:
@@ -284,11 +294,12 @@ def detect_and_crop_card(image):
         for angle in skew_angles:
             try:
                 rot_img = rotate_bound(img, angle)
-                results = model(rot_img, conf=0.15, verbose=False)
+                results = safe_predict(model, rot_img, conf=0.15, verbose=False)
                 if len(results) > 0 and len(results[0].boxes) > 0:
                     evaluate_boxes(results[0].boxes, rot_img)
             except Exception:
                 continue
+
 
     # 1. Kiểm tra nếu là mặt sau của CCCD
     if best_back_score >= 0.35 and (best_front_box is None or best_back_score > best_front_score + 0.10):

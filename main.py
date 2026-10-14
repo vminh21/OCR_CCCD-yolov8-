@@ -2571,16 +2571,16 @@ async def predict_api(
         try:
             result = process_cccd(temp_path)
         except ValueError as ve:
-            import traceback
+            logger.warning(f"Validation error in process_cccd: {ve}")
             return JSONResponse(
                 status_code=400,
-                content={"error": str(ve), "traceback": traceback.format_exc()}
+                content={"error": str(ve)}
             )
         except Exception as ex:
-            import traceback
+            logger.error(f"Error in process_cccd: {ex}", exc_info=True)
             return JSONResponse(
                 status_code=422,
-                content={"error": f"Lỗi xử lý: {str(ex)}", "traceback": traceback.format_exc()}
+                content={"error": f"Lỗi xử lý: {str(ex)}"}
             )
 
         finally:
