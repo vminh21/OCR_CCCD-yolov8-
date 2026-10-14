@@ -1,0 +1,611 @@
+        .svg-icon {
+            display: inline-block;
+            width: 1.15em;
+            height: 1.15em;
+            stroke-width: 2;
+            stroke: currentColor;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vertical-align: -0.2em;
+            flex-shrink: 0;
+        }
+        :root {
+            /* FACEBOOK DESIGN SYSTEM TOKENS */
+            --bg-canvas: #f0f2f5;           /* Facebook Canvas Gray */
+            --bg-card: #ffffff;             /* Facebook Card White */
+            --bg-card-subtle: #f0f2f5;
+            --border-color: #ced0d4;        /* Facebook Border */
+            --border-color-hover: #bec3c9;
+            --divider: #e4e6eb;
+            
+            --primary: #1877f2;             /* Facebook Classic Blue */
+            --primary-hover: #166fe5;
+            --primary-active: #0e5a9e;
+            --primary-subtle: #e7f3ff;      /* Facebook Highlight Light Blue */
+            --primary-border: #adc8e6;
+            
+            --secondary: #4b4f56;
+            --success: #42b72a;             /* Facebook Green Confirm */
+            --success-hover: #36a420;
+            --success-subtle: #e7f8ea;
+            --success-border: #a3e9ab;
+            
+            --warning: #f59e0b;
+            --warning-subtle: #fffbeb;
+            --warning-border: #fde68a;
+            
+            --danger: #fa383e;              /* Facebook Red Alert */
+            --danger-hover: #e41e3f;
+            --danger-subtle: #fde8e8;
+            --danger-border: #fca5a5;
+            
+            --text-main: #050505;           /* Facebook Title Black */
+            --text-body: #1c1e21;           /* Facebook Body Dark */
+            --text-muted: #65676b;          /* Facebook Secondary Gray */
+            --text-disabled: #8a8d91;
+            
+            --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.08);
+            --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.12);
+            --shadow-modal: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+            --shadow-primary: 0 2px 8px rgba(24, 119, 242, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: var(--bg-canvas);
+            color: var(--text-body);
+            min-height: 100vh;
+            padding: 16px 20px 40px;
+        }
+
+        .container {
+            max-width: 1320px;
+            margin: 0 auto;
+        }
+
+        /* ============================================================== */
+        /* NAVBAR / HEADER (FACEBOOK STYLE) */
+        /* ============================================================== */
+        header {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 10px 20px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.35rem;
+            box-shadow: 0 2px 6px rgba(24, 119, 242, 0.25);
+        }
+
+        .logo-title-group h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-title-group p {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .user-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-badge {
+            background: #e4e6eb;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #d8dadf;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+
+        /* ============================================================== */
+        /* BUTTON SYSTEM (FACEBOOK CLEAN STYLE - BORDER RADIUS 6PX) */
+        /* ============================================================== */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            outline: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: var(--success-hover);
+        }
+
+        .btn-outline {
+            background: #e4e6eb;
+            color: var(--text-main);
+            border: 1px solid transparent;
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: #d8dadf;
+            color: var(--text-main);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: var(--danger-hover);
+            color: #ffffff;
+        }
+
+        /* ============================================================== */
+        /* NAVIGATION TABS (FACEBOOK CLEAN STYLE - 8PX RADIUS) */
+        /* ============================================================== */
+        .tabs {
+            display: flex;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-card);
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 0.88rem;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            outline: none;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: #f0f2f5;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--primary-subtle);
+            border: 1px solid var(--primary-border);
+        }
+
+        /* TAB PANELS */
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: tabFadeIn 0.2s ease; }
+        @keyframes tabFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================================== */
+        /* CARDS & SCAN GRID (FACEBOOK FEED STYLE - 8PX RADIUS) */
+        /* ============================================================== */
+        .grid-scan {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 980px) {
+            .grid-scan { grid-template-columns: 1fr; }
+            header { border-radius: 8px; }
+            .tabs { border-radius: 8px; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 20px 22px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-card);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-card-hover);
+        }
+
+        .card h2 {
+            font-size: 1.08rem;
+            font-weight: 700;
+            margin-bottom: 18px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            letter-spacing: -0.2px;
+        }
+
+        .card-title-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-icon-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        /* ============================================================== */
+        /* DROPZONE (FACEBOOK STYLE - 8PX RADIUS) */
+        /* ============================================================== */
+        .dropzone {
+            border: 2px dashed #1877f2;
+            border-radius: 8px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f0f2f5;
+        }
+
+        .dropzone:hover {
+            border-color: #166fe5;
+            background: #e7f3ff;
+        }
+
+        .dropzone-icon {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 10px auto;
+            border-radius: 8px;
+            background: #e7f3ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: #1877f2;
+            transition: transform 0.2s;
+        }
+
+        .dropzone:hover .dropzone-icon {
+            transform: scale(1.05);
+        }
+
+        .preview-img {
+            width: 100%;
+            max-height: 420px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-top: 18px;
+            display: none;
+            border: 1px solid var(--border-color);
+            background: #000;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        }
+
+        /* ============================================================== */
+        /* INPUT FIELDS & FORM (FACEBOOK STYLE - 6PX RADIUS) */
+        /* ============================================================== */
+        .field-group { margin-bottom: 14px; }
+        .field-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #65676b;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .field-group input, .field-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 0.92rem;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .field-group input:focus, .field-group textarea:focus {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+
+        .field-row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* ============================================================== */
+        /* STATUS ALERTS */
+        /* ============================================================== */
+        .status {
+            margin-top: 14px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: none;
+            animation: tabFadeIn 0.2s ease;
+        }
+        .status.loading {
+            display: block;
+            background: var(--primary-subtle);
+            color: var(--primary);
+            border: 1px solid var(--primary-border);
+        }
+        .status.success {
+            display: block;
+            background: var(--success-subtle);
+            color: var(--success-hover);
+            border: 1px solid var(--success-border);
+        }
+        .status.error {
+            display: block;
+            background: var(--danger-subtle);
+            color: var(--danger);
+            border: 1px solid var(--danger-border);
+        }
+
+        /* ============================================================== */
+        /* TABLES & BADGES (FACEBOOK CLEAN - 8PX RADIUS) */
+        /* ============================================================== */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 14px;
+            font-size: 0.88rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        .data-table th {
+            background: #f0f2f5;
+            color: #65676b;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tbody tr {
+            background: #ffffff;
+            transition: background 0.15s ease;
+        }
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .badge-success { background: var(--success-subtle); color: var(--success-hover); border: 1px solid var(--success-border); }
+        .badge-warning { background: var(--warning-subtle); color: #d97706; border: 1px solid var(--warning-border); }
+        .badge-primary { background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); }
+
+        /* ============================================================== */
+        /* STATS CARDS (FACEBOOK STYLE - 8PX RADIUS) */
+        /* ============================================================== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            padding: 20px 22px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-card-hover);
+        }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .stat-val {
+            font-size: 2.1rem;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            margin-top: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        /* ============================================================== */
+        /* MODALS (FACEBOOK POPUP STYLE - 8PX RADIUS) */
+        /* ============================================================== */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal.active { display: flex; animation: modalPop 0.18s ease; }
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.97); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-content {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow-modal);
+        }
+
+        .field-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .field-row:last-child { border-bottom: none; }
+        .field-title { font-size: 0.8rem; font-weight: 700; color: #65676b; text-transform: uppercase; }
+        .field-val { font-size: 0.92rem; font-weight: 700; color: var(--text-main); text-align: right; }
+
+        /* TOAST (FACEBOOK TOAST - 6PX RADIUS) */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: none;
+            z-index: 2000;
+            background: #242526;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: toastPop 0.2s ease;
+        }
+        @keyframes toastPop {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }

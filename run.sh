@@ -8,6 +8,12 @@ if [ -f ".venv/bin/activate" ]; then
   source .venv/bin/activate
 fi
 
+# Build React frontend if dist not found
+if [ ! -d "frontend/dist" ] && command -v npm &> /dev/null; then
+  echo "📦 Đang build mã nguồn React frontend..."
+  npm --prefix frontend run build
+fi
+
 CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
 export SSL_CERT_FILE="$CERT_FILE"
 
