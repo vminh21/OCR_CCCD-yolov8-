@@ -27,6 +27,18 @@ except ImportError:
     pkg_res_mock.get_distribution = lambda name: DummyDist()
     sys.modules["pkg_resources"] = pkg_res_mock
 
+# Hotfix tương thích Gradio với schema Pydantic v2
+try:
+    import gradio_client.utils as client_utils
+    _orig_json_schema = client_utils._json_schema_to_python_type
+    def _safe_json_schema(schema, defs=None):
+        if isinstance(schema, bool):
+            return "typing.Any"
+        return _orig_json_schema(schema, defs)
+    client_utils._json_schema_to_python_type = _safe_json_schema
+except Exception as e:
+    pass
+
 import gradio as gr
 from fastapi.responses import HTMLResponse
 from starlette.routing import Route
