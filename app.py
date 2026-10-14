@@ -40,8 +40,9 @@ except Exception as e:
     pass
 
 import gradio as gr
-from fastapi.responses import HTMLResponse
+from gradio.routes import App
 from starlette.routing import Route
+from fastapi.responses import HTMLResponse
 from main import app as fastapi_app, HTML_UI
 from src.core.pipeline import process_cccd
 
@@ -65,18 +66,19 @@ with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     btn = gr.Button("Trích xuất thông tin")
     btn.click(fn=predict_gpu, inputs=[inp], outputs=[out])
 
-# 2. Truy cập ứng dụng FastAPI nội tại của Gradio
-app = demo.app
+# 2. Hook App.create_app để chèn 100% Giao diện Facebook UI vào trang chủ "/" và mount toàn bộ API
+orig_create_app = App.create_app
 
-# 3. Chèn Route trang chủ Facebook UI chuẩn vào đầu danh sách (ưu tiên khớp route / trước Gradio)
-async def custom_facebook_home(request):
-    return HTMLResponse(HTML_UI)
+@staticmethod
+def patched_create_app(blocks, app_kwargs=None, auth_dependency=None):
+    app = orig_create_app(blocks, app_kwargs, auth_dependency)
+    # Giao diện Facebook UI luôn được ưu tiên khớp đầu tiên tại trang chủ "/"
+    app.routes.insert(0, Route("/", lambda req: HTMLResponse(HTML_UI), methods=["GET"]))
+    # Gắn toàn bộ router và static media từ fastapi_app
+    app.mount("/", fastapi_app)
+    return app
 
-app.routes.insert(0, Route("/", custom_facebook_home, methods=["GET"]))
-
-# 4. Gắn toàn bộ fastapi_app (gồm /api, /predict, /media) thông qua Mount
-# Giúp Gradio không quét schema Pydantic gây lỗi mà vẫn định tuyến chuẩn xác 100%
-app.mount("/", fastapi_app)
+App.create_app = patched_create_app
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
