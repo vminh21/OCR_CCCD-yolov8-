@@ -69,13 +69,15 @@ Path("data/output").mkdir(parents=True, exist_ok=True)
 app.mount("/media", StaticFiles(directory="data/output"), name="media")
 
 # 5. Tích hợp toàn bộ các API routes từ fastapi_app (Auth, Predict, History, Stats, Camera Probe)
-existing_paths = {r.path for r in app.routes}
+existing_paths = {getattr(r, "path", None) for r in app.routes if getattr(r, "path", None)}
 for route in fastapi_app.routes:
-    if route.path not in existing_paths:
+    path = getattr(route, "path", None)
+    if path and path not in existing_paths:
         app.routes.append(route)
-        existing_paths.add(route.path)
+        existing_paths.add(path)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR Facebook UI Server launching on 0.0.0.0:{port}...")
     demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False)
+
