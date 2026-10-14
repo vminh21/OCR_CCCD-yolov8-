@@ -44,8 +44,18 @@ import gradio as gr
 from gradio.routes import App
 from starlette.routing import Route
 from fastapi.responses import HTMLResponse
-from main import app as fastapi_app, HTML_UI
-from src.core.pipeline import process_cccd
+from backend.main import app as fastapi_app, ROOT_DIR
+from backend.core.pipeline import process_cccd
+
+dist_index = ROOT_DIR / "frontend" / "dist" / "index.html"
+template_index = ROOT_DIR / "frontend" / "templates" / "index.html"
+
+def get_index_content():
+    if dist_index.exists():
+        return dist_index.read_text(encoding="utf-8")
+    if template_index.exists():
+        return template_index.read_text(encoding="utf-8")
+    return "<h1>CCCD OCR API is running</h1>"
 
 
 @spaces.GPU(duration=60)
@@ -78,8 +88,8 @@ def patched_create_app(*args, **kwargs):
         sig = inspect.signature(orig_create_app)
         filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
         app = orig_create_app(*args, **filtered)
-    # Giao diện Facebook UI luôn được ưu tiên khớp đầu tiên tại trang chủ "/"
-    app.routes.insert(0, Route("/", lambda req: HTMLResponse(HTML_UI), methods=["GET"]))
+    # Giao diện Facebook UI (React build) luôn được ưu tiên khớp đầu tiên tại trang chủ "/"
+    app.routes.insert(0, Route("/", lambda req: HTMLResponse(get_index_content()), methods=["GET"]))
     # Gắn toàn bộ router và static media từ fastapi_app
     app.mount("/", fastapi_app)
     return app
