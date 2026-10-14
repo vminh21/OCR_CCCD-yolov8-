@@ -177,7 +177,7 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
                 <th style={{ minWidth: '160px' }}>Quê Quán</th>
                 <th style={{ minWidth: '170px' }}>Nơi Thường Trú</th>
                 <th style={{ width: '90px', textAlign: 'center' }}>Trạng Thái</th>
-                <th style={{ width: '280px', textAlign: 'center' }}>Thao Tác</th>
+                <th style={{ width: '215px', textAlign: 'center' }}>Thao Tác</th>
               </tr>
             </thead>
             <tbody>
@@ -301,7 +301,7 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
                     </span>
                   </td>
 
-                  {/* HÀNH ĐỘNG: 4 NÚT THẲNG HÀNG TRÊN 1 DÒNG CHUẨN FACEBOOK */}
+                  {/* HÀNH ĐỘNG: 3 NÚT GỌN GÀNG (SỬA • XUẤT PDF • XÓA) */}
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '5px', justifyContent: 'center', alignItems: 'center' }}>
                       {/* SỬA */}
@@ -317,7 +317,7 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
                           alignItems: 'center',
                           gap: '3px',
                         }}
-                        title="Xem chi tiết & chỉnh sửa"
+                        title="Xem chi tiết, sửa hoặc nạp vào form"
                         onClick={() => onEditRecord(row)}
                       >
                         <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: 'var(--primary)' }}>
@@ -325,34 +325,6 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
                           <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                         </svg>
                         Sửa
-                      </button>
-
-                      {/* NẠP FORM */}
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        style={{
-                          padding: '4px 8px',
-                          fontSize: '0.78rem',
-                          height: '28px',
-                          color: '#0284c7',
-                          borderColor: '#bae6fd',
-                          background: '#f0f9ff',
-                          whiteSpace: 'nowrap',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                        }}
-                        title="Tải vào Form Tab 1 để quét hoặc kiểm tra lại"
-                        onClick={() => onLoadToScan && onLoadToScan(row)}
-                      >
-                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: '#0284c7' }}>
-                          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                          <path d="M21 3v5h-5" />
-                          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                          <path d="M8 16H3v5" />
-                        </svg>
-                        Nạp Form
                       </button>
 
                       {/* XUẤT PDF */}
