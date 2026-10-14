@@ -2,8 +2,19 @@
 import os
 import base64
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+os.environ["YOLO_CONFIG_DIR"] = "/tmp"
 
 import sys
+import types
+try:
+    import pkg_resources
+except ImportError:
+    pkg_res_mock = types.ModuleType("pkg_resources")
+    class DummyDist:
+        version = "5.2.0"
+    pkg_res_mock.get_distribution = lambda name: DummyDist()
+    sys.modules["pkg_resources"] = pkg_res_mock
+
 from pathlib import Path
 from typing import Optional
 import uvicorn
