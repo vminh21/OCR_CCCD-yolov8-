@@ -198,13 +198,15 @@ OCR_CCCD-yolov8-/
 │   ├── ocr/                    # Bộ máy VietOCR & tiền xử lý dải chữ
 │   ├── database/               # Quản lý SQLite database & repository
 │   └── api/                    # Router endpoints FastAPI
+├── docs/                       # Tài liệu báo cáo & sơ đồ thiết kế
+│   ├── reports/                # Báo cáo học phần & tài liệu kỹ thuật (.docx, .md)
+│   ├── diagrams/               # Sơ đồ lớp, sơ đồ trạng thái (.drawio, .png, .svg)
+│   └── scripts/                # Script tự động sinh sơ đồ
 ├── docker/                     # Cấu hình containerization
 ├── docker-compose.yml          # Triển khai nhanh với Docker Compose
-├── main.py                     # Ứng dụng chính (FastAPI Server + Facebook Web UI)
+├── main.py                     # Ứng dụng chính (FastAPI Server + Web UI)
 ├── test_batch.py               # Kịch bản kiểm thử hiệu năng hàng loạt
-├── generate_state_diagram.py   # Script sinh sơ đồ trạng thái hệ thống
 ├── requirements.txt            # Danh sách dependencies Python
-├── PIPELINE_DOCUMENTATION.md   # Tài liệu phân tích kỹ thuật chuyên sâu
 ├── .gitignore                  # Cấu hình loại bỏ file rác, tệp Word, weight lớn
 └── README.md                   # Tài liệu hướng dẫn sử dụng
 ```
