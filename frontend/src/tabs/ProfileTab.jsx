@@ -57,7 +57,7 @@ export default function ProfileTab({ currentUser, onLogout, showToast }) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
+    <div className="profile-grid">
       {/* KHUNG 1: THÔNG TIN TÀI KHOẢN */}
       <div className="card">
         <h2>

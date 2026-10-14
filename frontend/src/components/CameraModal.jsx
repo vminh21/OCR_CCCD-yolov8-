@@ -298,7 +298,7 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
         </div>
 
         {/* ACTION BUTTONS */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+        <div className="camera-modal-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             {videoDevices.length > 1 && (
               <button type="button" className="btn btn-outline" style={{ padding: '8px 14px', fontSize: '0.85rem' }} onClick={handleSwitchCamera}>

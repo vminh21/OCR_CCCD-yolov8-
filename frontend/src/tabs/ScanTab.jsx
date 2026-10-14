@@ -304,7 +304,7 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
         </div>
 
         {/* NÚT THAO TÁC */}
-        <div style={{ display: 'flex', gap: '12px', marginTop: '14px', marginBottom: '12px' }}>
+        <div className="scan-btn-group">
           <button
             type="button"
             className="btn btn-outline"
@@ -384,7 +384,7 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="field-row-grid">
             <div className="field-group">
               <label>3. Ngày sinh</label>
               <input
@@ -405,7 +405,7 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="field-row-grid">
             <div className="field-group">
               <label>5. Quốc tịch</label>
               <input
@@ -446,7 +446,7 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
             />
           </div>
 
-          <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
+          <div className="form-actions">
             <button
               type="submit"
               className="btn btn-success"

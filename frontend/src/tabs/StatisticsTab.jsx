@@ -219,7 +219,7 @@ export default function StatisticsTab({ showToast }) {
             </p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <div className="table-responsive">
             <table className="data-table" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
               <thead>
                 <tr>

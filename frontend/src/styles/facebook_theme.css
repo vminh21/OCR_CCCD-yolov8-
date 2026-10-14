@@ -241,6 +241,12 @@
             box-shadow: var(--shadow-card);
             gap: 4px;
             overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar {
+            display: none;
         }
 
         .tab-btn {
@@ -575,6 +581,8 @@
             padding: 24px;
             width: 100%;
             max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
             box-shadow: var(--shadow-modal);
         }
 
@@ -608,4 +616,243 @@
         @keyframes toastPop {
             from { transform: translateY(10px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* ============================================================== */
+        /* RESPONSIVE UTILITY CLASSES */
+        /* ============================================================== */
+        .scan-btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 14px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .search-filter-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            width: 280px;
+            padding: 8px 14px 8px 34px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            background: #ffffff;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: var(--shadow-xs);
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .camera-modal-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav-btn-text {
+            display: inline;
+        }
+
+        /* ============================================================== */
+        /* RESPONSIVE DESIGN BREAKPOINTS */
+        /* ============================================================== */
+        @media (max-width: 980px) {
+            .grid-scan { grid-template-columns: 1fr; }
+            header { border-radius: 8px; }
+            .tabs { border-radius: 8px; }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px 12px 30px;
+            }
+
+            header {
+                padding: 10px 14px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+
+            .logo-area {
+                justify-content: flex-start;
+            }
+
+            .user-nav {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .user-badge {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+
+            .tabs {
+                padding: 3px;
+                gap: 3px;
+            }
+
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 0.82rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 14px 16px;
+            }
+
+            .stat-val {
+                font-size: 1.6rem;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .modal {
+                padding: 10px;
+            }
+
+            .modal-content {
+                padding: 18px 14px !important;
+                max-width: 98vw;
+            }
+        }
+
+        @media (max-width: 580px) {
+            .field-row-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .form-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .form-actions .btn {
+                width: 100% !important;
+                flex: none !important;
+            }
+
+            .scan-btn-group {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .scan-btn-group .btn {
+                width: 100% !important;
+                flex: none !important;
+            }
+
+            .search-filter-bar {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-filter-bar form {
+                width: 100%;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+            }
+
+            .modal-actions .btn {
+                width: 100% !important;
+            }
+
+            .camera-modal-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .camera-modal-actions .btn {
+                width: 100% !important;
+            }
+
+            #toast {
+                left: 16px;
+                right: 16px;
+                bottom: 16px;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 440px) {
+            .logo-title-group h1 {
+                font-size: 1.05rem;
+            }
+
+            .logo-title-group p {
+                font-size: 0.68rem;
+            }
+
+            .nav-btn-text {
+                display: none;
+            }
+
+            .user-nav .btn {
+                padding: 6px 10px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
