@@ -16,3 +16,4 @@ python-dotenv>=1.0.0
 gradio>=4.0.0
 setuptools
 gdown
+email-validator
