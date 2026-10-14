@@ -2,9 +2,10 @@ import spaces
 import os
 import sys
 import types
-import subprocess
 from pathlib import Path
 
+# Tắt SSR mode để tránh xung đột cổng tiến trình Node.js trên Hugging Face
+os.environ["GRADIO_SSR_MODE"] = "false"
 # Cấu hình thư mục ghi tạm cho Ultralytics YOLO
 os.environ["YOLO_CONFIG_DIR"] = "/tmp"
 
@@ -55,22 +56,12 @@ demo.is_running = True
 demo.launched = True
 
 # 2. Gắn Gradio vào đường dẫn phụ "/gradio"
+# Giữ NGUYÊN 100% trang chủ "/" và toàn bộ các API cho Giao Diện Facebook UI
 app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR Facebook UI server running on 0.0.0.0:{port}")
-    try:
-        print("--- PROCESSES ---")
-        print(subprocess.check_output(["ps", "aux"]).decode())
-    except Exception as e:
-        print("ps aux err:", e)
-    try:
-        print("--- SS / NETSTAT ---")
-        print(subprocess.check_output(["ss", "-tlpn"]).decode())
-    except Exception as e:
-        print("ss err:", e)
-    print("--- ENV ---")
-    print({k: v for k, v in os.environ.items() if any(x in k for x in ["PORT", "GRADIO", "SPACE", "ZERO"])})
     uvicorn.run(app, host="0.0.0.0", port=port)
+
 
