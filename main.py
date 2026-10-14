@@ -22,7 +22,7 @@ except ImportError:
 from pathlib import Path
 from typing import Optional
 import uvicorn
-from fastapi import FastAPI, File, UploadFile, HTTPException, Header
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -818,9 +818,9 @@ HTML_UI = """
                         <div class="dropzone-icon">
                             <svg class="svg-icon" viewBox="0 0 24 24" style="width: 48px; height: 48px; color: var(--primary);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </div>
-                        <strong style="font-size: 1.05rem; color: var(--text-main); display: block;">Kéo thả ảnh CCCD vào đây hoặc bấm để chọn</strong>
-                        <p style="color: var(--text-muted); margin-top: 6px; font-size: 0.85rem; font-weight: 500;">Hỗ trợ ảnh định dạng JPG, PNG, WEBP từ máy tính</p>
-                        <input type="file" id="file-input" accept="image/*" style="display:none" onchange="uploadImage(event)">
+                        <strong style="font-size: 1.05rem; color: var(--text-main); display: block;">Kéo thả ảnh hoặc video CCCD vào đây hoặc bấm để chọn</strong>
+                        <p style="color: var(--text-muted); margin-top: 6px; font-size: 0.85rem; font-weight: 500;">Hỗ trợ ảnh (JPG, PNG, WEBP) hoặc video (MP4, MOV, WEBM) từ máy tính</p>
+                        <input type="file" id="file-input" accept="image/*,video/*" style="display:none" onchange="uploadImage(event)">
                     </div>
 
                     <!-- NÚT THAO TÁC: CHỌN FILE HOẶC BẬT CAMERA QUÉT TRỰC TIẾP -->
@@ -1975,7 +1975,7 @@ HTML_UI = """
                 closeCameraModal();
                 if (blob) {
                     showToast(`${sourceDesc}! Đang gửi AI trích xuất...`, true);
-                    processImageFile(blob, true);
+                    processImageFile(blob, true, 'WEBCAM');
                 } else {
                     showToast('Lỗi khi chụp khung hình!', false);
                 }
@@ -1983,37 +1983,59 @@ HTML_UI = """
         }
 
         // ========================================================
-        // 2B. XỬ LÝ ẢNH (DÙNG CHUNG CHO CẢ TẢI FILE VÀ CHỤP CAMERA)
+        // 2B. XỬ LÝ ẢNH & VIDEO (DÙNG CHUNG CHO TẢI FILE VÀ WEBCAM)
         // ========================================================
         function uploadImage(e) {
             const file = e.target.files[0];
             if (!file) return;
-            processImageFile(file, false);
+            const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|avi|mov|mkv|webm)$/i.test(file.name || '');
+            processImageFile(file, false, isVideo ? 'VIDEO' : 'IMAGE');
         }
 
-        async function processImageFile(fileOrBlob, isCamera = false) {
+        async function processImageFile(fileOrBlob, isCamera = false, sourceOverride = null) {
             const preview = document.getElementById('preview');
             const status = document.getElementById('status');
             const btnSave = document.getElementById('btn-save');
             const sourceBadge = document.getElementById('source-badge');
 
-            if (sourceBadge) {
-                sourceBadge.innerText = isCamera ? '🎥 Camera' : '📁 File ảnh';
-                sourceBadge.className = 'badge badge-success';
+            let sourceVal = sourceOverride;
+            if (!sourceVal) {
+                if (isCamera) sourceVal = 'WEBCAM';
+                else if (fileOrBlob.type && fileOrBlob.type.startsWith('video/')) sourceVal = 'VIDEO';
+                else if (fileOrBlob.name && /\.(mp4|avi|mov|mkv|webm)$/i.test(fileOrBlob.name)) sourceVal = 'VIDEO';
+                else sourceVal = 'IMAGE';
             }
 
-            preview.src = URL.createObjectURL(fileOrBlob);
-            preview.style.display = 'block';
+            if (sourceBadge) {
+                if (sourceVal === 'WEBCAM') {
+                    sourceBadge.innerText = '🎥 Webcam';
+                    sourceBadge.className = 'badge badge-primary';
+                } else if (sourceVal === 'VIDEO') {
+                    sourceBadge.innerText = '🎬 Video';
+                    sourceBadge.className = 'badge badge-warning';
+                } else {
+                    sourceBadge.innerText = '📁 File ảnh';
+                    sourceBadge.className = 'badge badge-success';
+                }
+            }
+
+            if (!fileOrBlob.type || !fileOrBlob.type.startsWith('video/')) {
+                preview.src = URL.createObjectURL(fileOrBlob);
+                preview.style.display = 'block';
+            }
 
             status.className = 'status loading';
-            status.innerText = isCamera 
-                ? '⏳ [Camera] Đang xoay nắn 360°, bóc tách 8 vùng & nhận diện VietOCR...' 
-                : '⏳ Đang xoay nắn 360°, bóc tách 8 vùng & nhận diện VietOCR...';
+            status.innerText = sourceVal === 'WEBCAM' 
+                ? '⏳ [Webcam] Đang xoay nắn 360°, bóc tách 8 vùng & nhận diện VietOCR...' 
+                : (sourceVal === 'VIDEO' 
+                    ? '⏳ [Video] Đang trích xuất frame, bóc tách 8 vùng & nhận diện VietOCR...' 
+                    : '⏳ Đang xoay nắn 360°, bóc tách 8 vùng & nhận diện VietOCR...');
             btnSave.disabled = true;
 
             const formData = new FormData();
             const fileName = isCamera ? 'camera_capture.jpg' : (fileOrBlob.name || 'cccd_upload.jpg');
             formData.append('file', fileOrBlob, fileName);
+            formData.append('input_source', sourceVal);
 
             const headers = {};
             if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
@@ -2594,14 +2616,15 @@ async def camera_probe_api(file: UploadFile = File(...)):
     }
 
 
-@app.post("/predict/image", summary="Trích xuất thông tin CCCD từ file ảnh")
+@app.post("/predict/image", summary="Trích xuất thông tin CCCD từ file ảnh hoặc video")
 async def predict_api(
     file: UploadFile = File(...),
+    input_source: Optional[str] = Form("IMAGE"),
     authorization: Optional[str] = Header(None)
 ):
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
-    if ext not in ("jpg", "jpeg", "png", "bmp", "webp"):
-        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file ảnh định dạng JPG, JPEG, PNG, BMP hoặc WEBP!")
+    if ext not in ("jpg", "jpeg", "png", "bmp", "webp", "mp4", "avi", "mov", "mkv", "webm"):
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP) hoặc video (MP4, AVI, MOV, WEBM)!")
 
     contents = await file.read()
     if not contents:
@@ -2700,21 +2723,33 @@ async def predict_api(
                     avatar_file = Path("data/output/avatars") / f"{upload_stem}_avatar.jpg"
                     avatar_path_val = f"/media/avatars/{upload_stem}_avatar.jpg" if avatar_file.exists() else None
 
+                    real_confidence = float(result.get("_confidence", 0.95))
+                    real_proc_time = float(result.get("_processing_time", 0.25))
+
+                    source_clean = (input_source or "IMAGE").upper().strip()
+                    if source_clean not in ("IMAGE", "WEBCAM", "VIDEO"):
+                        if ext in ("mp4", "avi", "mov", "mkv", "webm"):
+                            source_clean = "VIDEO"
+                        else:
+                            source_clean = "IMAGE"
+
                     scan_obj, res_obj = create_scan_and_save_result(
                         db=db_session,
                         user_id=user.id,
                         extracted_fields=extracted,
-                        input_source="IMAGE",
+                        input_source=source_clean,
                         raw_image_path=crop_path_val,
                         crop_image_path=crop_path_val,
                         avatar_path=avatar_path_val,
-                        confidence_score=0.96,
-                        processing_time=0.15
+                        confidence_score=real_confidence,
+                        processing_time=real_proc_time
                     )
                     result["scan_id"] = scan_obj.id
                     result["result_id"] = res_obj.id
                     result["crop_image_path"] = crop_path_val
                     result["avatar_path"] = avatar_path_val
+                    result["confidence_score"] = round(real_confidence * 100, 1)
+                    result["processing_time"] = real_proc_time
             finally:
                 db_session.close()
         except Exception as db_err:

@@ -83,9 +83,9 @@ def vietocr_read(image):
         pil_img = prepare_image(image)
         if pil_img is None:
             return "", 0.0
-        text = vietocr_detector.predict(pil_img)
-        conf = 0.95 if text else 0.0
-        return text.strip(), conf
+        text, prob = vietocr_detector.predict(pil_img, return_prob=True)
+        conf = float(prob) if text else 0.0
+        return text.strip(), round(conf, 4)
     except Exception as e:
         logger.error(f"VietOCR error: {e}")
         return "", 0.0
@@ -99,8 +99,9 @@ def read_field(field_name, images):
     """
     if isinstance(images, list):
         text_parts = []
+        conf_list = []
         for img in images:
-            t, _ = vietocr_read(img)
+            t, c = vietocr_read(img)
             t = t.strip()
             if t:
                 # Bỏ qua dòng nếu chỉ chứa đúng từ nhãn in sẵn của thẻ
@@ -108,7 +109,9 @@ def read_field(field_name, images):
                 if t_lower in ["quán", "origin", "place", "residence", "nơi", "trú", "nơi thường trú", "quê quán"]:
                     continue
                 text_parts.append(t)
+                conf_list.append(c)
 
+        avg_conf = float(np.mean(conf_list)) if conf_list else 0.0
         if field_name in ["noi_ctru", "que_quan"]:
             full_text = ", ".join(text_parts).strip()
             full_text = full_text.replace(" ,", ",").replace(",,", ",")
@@ -117,7 +120,7 @@ def read_field(field_name, images):
 
         return {
             "text": full_text,
-            "confidence": 0.95 if full_text else 0.0,
+            "confidence": round(avg_conf, 4),
             "engine": "vietocr"
         }
 
@@ -125,7 +128,7 @@ def read_field(field_name, images):
         text, conf = vietocr_read(images)
         return {
             "text": text,
-            "confidence": conf,
+            "confidence": round(float(conf), 4),
             "engine": "vietocr"
         }
 
