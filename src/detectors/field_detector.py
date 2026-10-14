@@ -77,6 +77,15 @@ def sort_multiline_crops(crop_items, field_name=""):
     return [it[4] for it in line1_sorted] + [it[4] for it in line2_sorted]
 
 
+def safe_field_predict(model, img, **kwargs):
+    try:
+        return model.predict(img, **kwargs)
+    except Exception:
+        kw = dict(kwargs)
+        kw["device"] = "cpu"
+        return model.predict(img, **kw)
+
+
 def fix_card_orientation(card_img):
     """
     Kiểm tra và tự động xoay thẻ 180° nếu thẻ bị lộn ngược.
@@ -86,13 +95,13 @@ def fix_card_orientation(card_img):
         return card_img
 
     # Đánh giá hướng 0°
-    res0 = field_model.predict(card_img, conf=0.30, verbose=False)
+    res0 = safe_field_predict(field_model, card_img, conf=0.30, verbose=False)
     score0 = sum(float(b.conf[0]) for b in res0[0].boxes) if len(res0) > 0 else 0
     count0 = len(res0[0].boxes) if len(res0) > 0 else 0
 
     # Đánh giá hướng 180°
     card_180 = cv2.rotate(card_img, cv2.ROTATE_180)
-    res180 = field_model.predict(card_180, conf=0.30, verbose=False)
+    res180 = safe_field_predict(field_model, card_180, conf=0.30, verbose=False)
     score180 = sum(float(b.conf[0]) for b in res180[0].boxes) if len(res180) > 0 else 0
     count180 = len(res180[0].boxes) if len(res180) > 0 else 0
 
@@ -114,7 +123,8 @@ def extract_fields_yolo(card_image):
         return {}
 
     # Chạy kết quả dự đoán trường dữ liệu
-    results = field_model.predict(card_image, conf=0.45, verbose=False)
+    results = safe_field_predict(field_model, card_image, conf=0.45, verbose=False)
+
 
     raw_crops = {}
     img_visualize = card_image.copy()
