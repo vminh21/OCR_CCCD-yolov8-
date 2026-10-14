@@ -124,16 +124,26 @@ def process_cccd(image_path):
     if not ho_ten or len(ho_ten) < 2:
         raise ValueError("Sai định dạng CCCD! Không nhận diện được họ và tên hợp lệ của thẻ CCCD.")
 
-    # Tính độ tin cậy thực tế trung bình từ VietOCR và thời gian xử lý
+    # Tính độ tin cậy thực tế kết hợp:
+    # 1. Xác suất đọc ký tự thực tế từ VietOCR
+    # 2. Phạt giảm độ tin cậy theo số trường detect được (càng detect ít trường trong 8 trường chuẩn thì độ tin cậy càng giảm)
+    KEY_FIELDS = ['so_cccd', 'ho_ten', 'ngay_sinh', 'gioi_tinh', 'quoc_tich', 'que_quan', 'noi_ctru', 'ngay_het_han']
+    detected_count = sum(1 for f in KEY_FIELDS if final_data.get(f) and str(final_data[f]).strip())
+    field_ratio = detected_count / 8.0  # Tỷ lệ trường trích xuất thành công
+
     field_confs = [res["confidence"] for res in ocr_results.values() if isinstance(res, dict) and "confidence" in res and res["confidence"] > 0]
-    avg_confidence = float(np.mean(field_confs)) if field_confs else 0.92
-    final_data["_confidence"] = round(avg_confidence, 4)
+    raw_ocr_conf = float(np.mean(field_confs)) if field_confs else 0.90
+    
+    # Độ tin cậy = OCR conf * (số trường detect / 8)
+    combined_confidence = round(raw_ocr_conf * field_ratio, 4)
+    final_data["_confidence"] = combined_confidence
+    final_data["_detected_fields_count"] = detected_count
     final_data["_processing_time"] = round(time.time() - start_time, 2)
 
     # 8. SAVE RESULTS
     print("[7/7] Saving results...")
     save_json(final_data, JSON_DIR / f"{image_path.stem}.json")
     save_text(final_data, TXT_DIR / f"{image_path.stem}.txt")
-    print(f"✅ HOÀN TẤT: Kết quả lưu tại: {JSON_DIR} và {TXT_DIR} (Độ tin cậy: {round(avg_confidence*100, 1)}% - {final_data['_processing_time']}s)")
+    print(f"✅ HOÀN TẤT: Kết quả lưu tại: {JSON_DIR} và {TXT_DIR} (Phát hiện: {detected_count}/8 trường - Độ tin cậy: {round(combined_confidence*100, 1)}% - {final_data['_processing_time']}s)")
 
     return final_data
