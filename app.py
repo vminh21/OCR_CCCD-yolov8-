@@ -24,16 +24,8 @@ import gradio as gr
 from main import app as fastapi_app
 from src.core.pipeline import process_cccd
 
-try:
-    gpu_decorator = spaces.GPU(duration=60)
-    print("✅ Hugging Face ZeroGPU (@spaces.GPU) đã được kích hoạt thành công!")
-except Exception as e:
-    print(f"ℹ️ Chạy chế độ CPU: {e}")
-    def gpu_decorator(fn):
-        return fn
 
-
-@gpu_decorator
+@spaces.GPU(duration=60)
 def predict_gpu(image_file):
     """Hàm xử lý AI tăng tốc bằng GPU A10G cho Hugging Face Spaces"""
     if not image_file:
@@ -42,6 +34,7 @@ def predict_gpu(image_file):
         return process_cccd(image_file)
     except Exception as e:
         return {"error": str(e)}
+
 
 
 # 1. Tạo Gradio Blocks chứa hàm GPU để vượt qua bài kiểm tra ZeroGPU của Hugging Face
