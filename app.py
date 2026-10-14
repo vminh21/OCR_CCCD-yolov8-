@@ -1,11 +1,20 @@
-import spaces
+try:
+    import spaces
+except ImportError:
+    class MockSpaces:
+        @staticmethod
+        def GPU(*args, **kwargs):
+            def decorator(fn):
+                return fn
+            return decorator
+    spaces = MockSpaces()
+
 import os
 import sys
 import types
 from pathlib import Path
 
-# Tắt SSR mode để tránh xung đột cổng tiến trình Node.js trên Hugging Face
-os.environ["GRADIO_SSR_MODE"] = "false"
+
 # Cấu hình thư mục ghi tạm cho Ultralytics YOLO
 os.environ["YOLO_CONFIG_DIR"] = "/tmp"
 
@@ -19,9 +28,11 @@ except ImportError:
     pkg_res_mock.get_distribution = lambda name: DummyDist()
     sys.modules["pkg_resources"] = pkg_res_mock
 
-import uvicorn
 import gradio as gr
-from main import app as fastapi_app
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.routing import Route
+from main import app as fastapi_app, HTML_UI
 from src.core.pipeline import process_cccd
 
 
@@ -36,8 +47,7 @@ def predict_gpu(image_file):
         return {"error": str(e)}
 
 
-
-# 1. Tạo Gradio Blocks chứa hàm GPU để vượt qua bài kiểm tra ZeroGPU của Hugging Face
+# 1. Khởi tạo Gradio Blocks chứa hàm ZeroGPU @spaces.GPU
 with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     gr.Markdown("### CCCD OCR Backend Engine (NVIDIA A10G GPU)")
     inp = gr.Image(label="Ảnh đầu vào", type="filepath")
@@ -45,16 +55,27 @@ with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     btn = gr.Button("Trích xuất thông tin")
     btn.click(fn=predict_gpu, inputs=[inp], outputs=[out])
 
-demo.is_running = True
-demo.launched = True
+# 2. Truy cập ứng dụng FastAPI nội tại của Gradio
+app = demo.app
 
-# 2. Gắn Gradio vào đường dẫn phụ "/gradio"
-# Giữ NGUYÊN 100% trang chủ "/" và toàn bộ các API cho Giao Diện Facebook UI
-app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
+# 3. Chèn Route trang chủ Facebook UI chuẩn vào đầu danh sách (ưu tiên khớp route / trước Gradio)
+async def custom_facebook_home(request):
+    return HTMLResponse(HTML_UI)
+
+app.routes.insert(0, Route("/", custom_facebook_home, methods=["GET"]))
+
+# 4. Mount thư mục tĩnh /media
+Path("data/output").mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory="data/output"), name="media")
+
+# 5. Tích hợp toàn bộ các API routes từ fastapi_app (Auth, Predict, History, Stats, Camera Probe)
+existing_paths = {r.path for r in app.routes}
+for route in fastapi_app.routes:
+    if route.path not in existing_paths:
+        app.routes.append(route)
+        existing_paths.add(route.path)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
-    print(f"[Startup] CCCD OCR Facebook UI server running on 0.0.0.0:{port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
-
+    print(f"[Startup] CCCD OCR Facebook UI Server launching on 0.0.0.0:{port}...")
+    demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False)
