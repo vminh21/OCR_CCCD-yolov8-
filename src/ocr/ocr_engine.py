@@ -22,10 +22,13 @@ try:
     config['device'] = 'cpu'
     if MODEL_VIETOCR_WEIGHTS_PATH.exists():
         config['weights'] = str(MODEL_VIETOCR_WEIGHTS_PATH)
+    else:
+        # Nếu chưa có file weights cục bộ (trên Cloud/Spaces), tự động tải từ URL chính thức của VietOCR
+        config['weights'] = 'https://vocr.vn/data/vietocr/vgg_transformer.pth'
     config['predictor']['beamsearch'] = False
 
     vietocr_detector = Predictor(config)
-    logger.info("Khởi tạo VietOCR engine offline thành công!")
+    logger.info("Khởi tạo VietOCR engine thành công!")
 except Exception as e:
     logger.error(f"Lỗi khởi tạo VietOCR: {e}")
     vietocr_detector = None

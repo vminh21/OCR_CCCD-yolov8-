@@ -1,7 +1,7 @@
 # src/database/schemas.py
 from typing import Optional, List
 from datetime import date, datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 # ==============================================================================
 # 1. USER SCHEMAS (BẢNG 1: USERS)
@@ -9,7 +9,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 class UserRegister(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    email: EmailStr
+    email: str = Field(..., max_length=100)
     password: str = Field(..., min_length=6)
     full_name: str = Field(..., min_length=2, max_length=100)
 
