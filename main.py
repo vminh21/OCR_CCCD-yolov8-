@@ -1280,6 +1280,11 @@ HTML_UI = """
     <div id="toast"></div>
 
     <script>
+        // Tự động chuyển hướng từ 0.0.0.0 sang 127.0.0.1 để trình duyệt cấp quyền Camera (tránh bị browser security chặn)
+        if (window.location.hostname === '0.0.0.0') {
+            window.location.replace(window.location.href.replace('//0.0.0.0', '//127.0.0.1'));
+        }
+
         let currentScanId = null;
         let currentResultId = null;
         let authToken = localStorage.getItem('token') || '';
@@ -2824,7 +2829,16 @@ async def predict_api(
 
 
 if __name__ == "__main__":
-    host = os.environ.get("HOST", "0.0.0.0")
+    is_container = os.environ.get("SPACE_ID") or os.environ.get("CONTAINER") or os.path.exists("/.dockerenv")
+    default_host = "0.0.0.0" if is_container else "127.0.0.1"
+    host = os.environ.get("HOST", default_host)
     port = int(os.environ.get("PORT", 8000))
     reload = os.environ.get("RELOAD", "false").lower() == "true"
+    
+    print("\n" + "="*60)
+    print("🚀 CCCD OCR SERVER ĐANG KHỞI CHẠY!")
+    print(f"👉 Vui lòng mở trình duyệt tại: http://127.0.0.1:{port} hoặc http://localhost:{port}")
+    print(f"⚠️  LƯU Ý: Không dùng http://0.0.0.0:{port} vì Chrome sẽ chặn Camera ('Not Secure').")
+    print("="*60 + "\n")
+    
     uvicorn.run("main:app", host=host, port=port, reload=reload)
