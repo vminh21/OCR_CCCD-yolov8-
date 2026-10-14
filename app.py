@@ -18,6 +18,16 @@ except ImportError:
 import uvicorn
 from main import app
 
+# Hugging Face ZeroGPU compatibility handler
+try:
+    import spaces
+    @spaces.GPU(duration=60)
+    def zero_gpu_worker():
+        return True
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR server running on 0.0.0.0:{port}")
