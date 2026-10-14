@@ -41,13 +41,6 @@ def init_engine():
 engine = init_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Tự động tạo bảng nếu chưa tồn tại
-try:
-    import src.database.models  # noqa: F401
-    Base.metadata.create_all(bind=engine)
-except Exception as e:
-    print(f"[DB Notice] create_all: {e}")
-
 def get_db():
     """FastAPI Dependency cung cấp Session cơ sở dữ liệu cho mỗi request"""
     db = SessionLocal()
@@ -55,3 +48,30 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Tự động tạo bảng nếu chưa tồn tại và khởi tạo tài khoản mẫu minh_final
+try:
+    import src.database.models  # noqa: F401
+    Base.metadata.create_all(bind=engine)
+
+    from src.database.models import User, ScanStatistic
+    from src.database.security import hash_password
+    with SessionLocal() as _db:
+        _existing = _db.query(User).filter(User.username == "minh_final").first()
+        if not _existing:
+            _demo = User(
+                username="minh_final",
+                email="minh_final@example.com",
+                full_name="Nguyễn Văn Minh (Demo)",
+                password_hash=hash_password("password123")
+            )
+            _db.add(_demo)
+            _db.commit()
+            _db.refresh(_demo)
+            _stat = _db.query(ScanStatistic).filter(ScanStatistic.user_id == _demo.id).first()
+            if not _stat:
+                _db.add(ScanStatistic(user_id=_demo.id))
+                _db.commit()
+            print("✅ Đã khởi tạo tài khoản mẫu minh_final / password123 thành công!")
+except Exception as e:
+    print(f"[DB Notice] create_all / seed: {e}")

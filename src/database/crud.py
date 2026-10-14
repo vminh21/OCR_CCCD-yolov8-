@@ -39,6 +39,21 @@ def register_user(db: Session, user_in: UserRegister) -> User:
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     user = get_user_by_username(db, username)
     if not user:
+        # Tự động khởi tạo tài khoản mẫu nếu đăng nhập lần đầu
+        if username == "minh_final" and password == "password123":
+            user = User(
+                username="minh_final",
+                email="minh_final@example.com",
+                full_name="Nguyễn Văn Minh (Demo)",
+                password_hash=hash_password("password123")
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            stat = ScanStatistic(user_id=user.id)
+            db.add(stat)
+            db.commit()
+            return user
         return None
     if not verify_password(password, user.password_hash):
         return None
