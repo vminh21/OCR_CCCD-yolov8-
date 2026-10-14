@@ -8,6 +8,8 @@ __pycache__/
 *.egg
 *.egg-info/
 dist/
+!frontend/dist/
+!frontend/dist/**
 build/
 .eggs/
 .Python
