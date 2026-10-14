@@ -833,6 +833,7 @@ HTML_UI = """
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="3"/></svg>
                             Bật Camera Quét Thẻ
                         </button>
+                        <input type="file" id="camera-native-input" accept="image/*" capture="environment" style="display:none" onchange="uploadImage(event)">
                     </div>
 
                     <!-- Ảnh hiển thị: Ảnh gốc lúc chọn -> Ảnh nắn phẳng vẽ 8 bounding box sau khi AI quét -->
@@ -1150,6 +1151,15 @@ HTML_UI = """
                 <button type="button" class="btn btn-outline" style="padding: 4px 10px; border-radius: 4px;" onclick="closeCameraModal()">✕</button>
             </div>
 
+            <!-- CẢNH BÁO CHO TRƯỜNG HỢP MỞ QUA IFRAME HUGGING FACE -->
+            <div id="iframe-alert-banner" style="display:none; margin-bottom: 12px; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 0.85rem; color: #1e40af; align-items: center; justify-content: space-between; gap: 8px;">
+                <span>💡 <strong>Lưu ý:</strong> Khung nhúng Hugging Face Hub có thể chặn Camera. Bạn hãy mở trên Tab riêng:</span>
+                <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                    <button type="button" class="btn btn-outline" style="padding: 5px 10px; font-size: 0.8rem; background: #fff;" onclick="closeCameraModal(); document.getElementById('camera-native-input').click();">Chụp Bằng Máy</button>
+                    <a href="https://vminh21-ccccd-ocr.hf.space" target="_blank" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.8rem; text-decoration: none; white-space: nowrap;">Mở Tab Riêng</a>
+                </div>
+            </div>
+
             <!-- KHUNG CAMERA VIEWPORT -->
             <div id="camera-viewport" style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); box-shadow: inset 0 0 24px rgba(0,0,0,0.85);">
                 <!-- Luồng Video Stream -->
@@ -1283,6 +1293,10 @@ HTML_UI = """
         // Tự động chuyển hướng từ 0.0.0.0 sang 127.0.0.1 để trình duyệt cấp quyền Camera (tránh bị browser security chặn)
         if (window.location.hostname === '0.0.0.0') {
             window.location.replace(window.location.href.replace('//0.0.0.0', '//127.0.0.1'));
+        }
+        // Đảm bảo luôn chạy qua HTTPS khi ở trên Hugging Face để trình duyệt cho phép dùng Camera
+        if (window.location.protocol === 'http:' && window.location.hostname.endsWith('hf.space')) {
+            window.location.replace(window.location.href.replace('http:', 'https:'));
         }
 
         let currentScanId = null;
@@ -1525,6 +1539,12 @@ HTML_UI = """
             const badgeText = document.getElementById('camera-status-text');
             const badgeDot = document.getElementById('camera-status-dot');
 
+            const isIframe = (window.self !== window.top);
+            const iframeBanner = document.getElementById('iframe-alert-banner');
+            if (iframeBanner) {
+                iframeBanner.style.display = isIframe ? 'flex' : 'none';
+            }
+
             modal.classList.add('active');
             isCapturingPhoto = false;
             consecutiveCardHits = 0;
@@ -1535,11 +1555,14 @@ HTML_UI = """
 
             try {
                 if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-                    throw new Error('Trình duyệt khóa Camera trên IP không bảo mật! Hãy đổi địa chỉ web thành http://localhost:8000 hoặc dùng link https://vminh21-ccccd-ocr.hf.space');
+                    throw new Error('Trình duyệt khóa Camera trên kết nối không bảo mật! Vui lòng truy cập qua HTTPS.');
                 }
 
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error('Trình duyệt chặn Camera vì URL không bảo mật (Not Secure)! Vui lòng truy cập qua http://localhost:8000');
+                    if (isIframe) {
+                        throw new Error('Khung nhúng Hugging Face Hub chặn quyền Camera! Vui lòng bấm nút "Mở Tab Riêng" hoặc "Chụp Bằng Máy".');
+                    }
+                    throw new Error('Trình duyệt không hỗ trợ Camera trực tiếp!');
                 }
 
                 await startCameraStream();
@@ -1558,17 +1581,22 @@ HTML_UI = """
             } catch (err) {
                 console.error('Camera error:', err);
                 let friendlyMsg = 'Không thể mở Camera: ' + (err.message || err.name);
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    friendlyMsg = '⚠️ Bạn chưa cho phép trình duyệt dùng Camera! Vui lòng bấm vào biểu tượng 🔒 hoặc biểu tượng Camera trên thanh địa chỉ trình duyệt rồi chọn "Cho phép" (Allow).';
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError') {
+                    if (isIframe) {
+                        friendlyMsg = '⚠️ Camera bị chặn do đang xem trong khung nhúng Hugging Face Hub! Vui lòng bấm vào nút "Mở Tab Riêng" ở thông báo bên trên.';
+                    } else {
+                        friendlyMsg = '⚠️ Bạn chưa cho phép trình duyệt dùng Camera! Vui lòng bấm vào biểu tượng 🔒 hoặc biểu tượng Camera trên thanh địa chỉ rồi chọn "Cho phép" (Allow).';
+                    }
                 } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                    friendlyMsg = '⚠️ Camera đang bị ứng dụng khác (Zoom, FaceTime, Meet...) sử dụng. Vui lòng tắt ứng dụng kia rồi thử lại!';
+                    friendlyMsg = '⚠️ Camera đang bị ứng dụng khác (Zoom, FaceTime, Meet, hoặc Tab localhost) chiếm dụng. Vui lòng tắt tab/ứng dụng đó rồi thử lại!';
                 } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                     friendlyMsg = '⚠️ Không tìm thấy thiết bị Camera nào trên máy tính!';
                 } else if (err.name === 'OverconstrainedError') {
                     friendlyMsg = '⚠️ Camera không hỗ trợ độ phân giải yêu cầu. Vui lòng thử lại!';
                 }
                 showToast(friendlyMsg, false);
-                closeCameraModal();
+                if (badgeText) badgeText.innerText = isIframe ? 'Bị chặn bởi khung Hugging Face' : 'Lỗi Camera';
+                if (badgeDot) badgeDot.style.background = '#ef4444';
             }
         }
 
