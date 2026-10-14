@@ -8,10 +8,12 @@ if [ -f ".venv/bin/activate" ]; then
   source .venv/bin/activate
 fi
 
-# Build React frontend if dist not found
-if [ ! -d "frontend/dist" ] && command -v npm &> /dev/null; then
-  echo "📦 Đang build mã nguồn React frontend..."
-  npm --prefix frontend run build
+# Build React frontend if dist or JS assets not found
+if [ ! -f "frontend/dist/index.html" ] || [ -z "$(ls -A frontend/dist/assets/*.js 2>/dev/null)" ]; then
+  if command -v npm &> /dev/null; then
+    echo "📦 Đang build mã nguồn React frontend..."
+    npm --prefix frontend run build
+  fi
 fi
 
 CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
