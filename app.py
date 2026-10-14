@@ -14,7 +14,6 @@ import sys
 import types
 from pathlib import Path
 
-
 # Cấu hình thư mục ghi tạm cho Ultralytics YOLO
 os.environ["YOLO_CONFIG_DIR"] = "/tmp"
 
@@ -30,7 +29,6 @@ except ImportError:
 
 import gradio as gr
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from starlette.routing import Route
 from main import app as fastapi_app, HTML_UI
 from src.core.pipeline import process_cccd
@@ -64,20 +62,11 @@ async def custom_facebook_home(request):
 
 app.routes.insert(0, Route("/", custom_facebook_home, methods=["GET"]))
 
-# 4. Mount thư mục tĩnh /media
-Path("data/output").mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory="data/output"), name="media")
-
-# 5. Tích hợp toàn bộ các API routes từ fastapi_app (Auth, Predict, History, Stats, Camera Probe)
-existing_paths = {getattr(r, "path", None) for r in app.routes if getattr(r, "path", None)}
-for route in fastapi_app.routes:
-    path = getattr(route, "path", None)
-    if path and path not in existing_paths:
-        app.routes.append(route)
-        existing_paths.add(path)
+# 4. Gắn toàn bộ fastapi_app (gồm /api, /predict, /media) thông qua Mount
+# Giúp Gradio không quét schema Pydantic gây lỗi mà vẫn định tuyến chuẩn xác 100%
+app.mount("/", fastapi_app)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR Facebook UI Server launching on 0.0.0.0:{port}...")
     demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False)
-
