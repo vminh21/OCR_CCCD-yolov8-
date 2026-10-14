@@ -1,6 +1,6 @@
-// frontend/src/components/EditModal.jsx
 import React, { useState, useEffect } from 'react';
 import { apiUpdateResult } from '../services/api';
+import { exportCccdPdf } from '../utils/exportPdf';
 
 export default function EditModal({ isOpen, record, onClose, onSaveSuccess, onOpenInScanTab, showToast }) {
   const [formData, setFormData] = useState({
@@ -140,15 +140,37 @@ export default function EditModal({ isOpen, record, onClose, onSaveSuccess, onOp
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-outline"
+              style={{ color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              onClick={() => exportCccdPdf({ ...record, ...formData })}
+            >
+              <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '14px', height: '14px', color: '#dc2626' }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <line x1="10" y1="9" x2="8" y2="9" />
+              </svg>
+              Xuất PDF
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ color: '#1877f2', borderColor: '#bfdbfe', background: '#eff6ff', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               onClick={() => {
                 onClose();
-                onOpenInScanTab(record);
+                onOpenInScanTab({ ...record, ...formData });
               }}
             >
+              <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '14px', height: '14px' }}>
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 16H3v5" />
+              </svg>
               Tải vào Form Tab 1 để quét lại
             </button>
             <button type="submit" className="btn btn-success" disabled={loading}>

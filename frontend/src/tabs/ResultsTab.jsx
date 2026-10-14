@@ -1,8 +1,9 @@
 // frontend/src/tabs/ResultsTab.jsx
 import React, { useState, useEffect } from 'react';
 import { apiGetResults, apiDeleteResult } from '../services/api';
+import { exportCccdPdf } from '../utils/exportPdf';
 
-export default function ResultsTab({ onEditRecord, showToast }) {
+export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -56,46 +57,44 @@ export default function ResultsTab({ onEditRecord, showToast }) {
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-        <h2>
-          <span className="card-title-left">
-            <span className="card-icon-badge" style={{ background: '#eff6ff', color: 'var(--primary)' }}>
-              <svg className="svg-icon" viewBox="0 0 24 24">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <line x1="10" y1="9" x2="8" y2="9" />
-              </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ margin: 0, padding: 0 }}>
+            <span className="card-title-left">
+              <span className="card-icon-badge" style={{ background: '#eff6ff', color: 'var(--primary)' }}>
+                <svg className="svg-icon" viewBox="0 0 24 24">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <line x1="10" y1="9" x2="8" y2="9" />
+                </svg>
+              </span>
+              <span>Bảng Lưu Kết Quả Thẻ CCCD ({total} hồ sơ)</span>
             </span>
-            <span>Bảng Dữ Liệu Hồ Sơ CCCD (CSDL PostgreSQL: cccd_results)</span>
-          </span>
-          <span className="badge badge-primary">Tổng: {total} hồ sơ</span>
-        </h2>
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '4px 0 0 0' }}>
+            Hệ thống lưu trữ 8 trường dữ liệu CCCD, hỗ trợ sửa, nạp lại vào Form Tab 1 và xuất file PDF.
+          </p>
+        </div>
 
-        {/* SEARCH FORM */}
         <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '8px' }}>
           <input
             type="text"
-            placeholder="Tìm theo CCCD, họ tên..."
+            placeholder="Tìm theo Số CCCD hoặc Họ tên..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '240px', padding: '8px 12px', fontSize: '0.9rem' }}
+            style={{
+              padding: '8px 14px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '6px',
+              fontSize: '0.88rem',
+              width: '260px',
+              outline: 'none',
+            }}
           />
-          <button type="submit" className="btn btn-outline" style={{ padding: '8px 14px' }}>
-            <svg className="svg-icon" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            Tìm
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            style={{ padding: '8px 12px' }}
-            onClick={() => { setSearch(''); fetchResults(''); }}
-          >
-            Làm mới
+          <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px' }}>
+            Tìm Kiếm
           </button>
         </form>
       </div>
@@ -116,7 +115,7 @@ export default function ResultsTab({ onEditRecord, showToast }) {
             <thead>
               <tr>
                 <th style={{ width: '50px' }}>ID</th>
-                <th style={{ width: '90px' }}>Ảnh Cắt</th>
+                <th style={{ width: '85px' }}>Ảnh Cắt</th>
                 <th>Số CCCD (12 số)</th>
                 <th>Họ và Tên</th>
                 <th>Ngày Sinh</th>
@@ -124,7 +123,7 @@ export default function ResultsTab({ onEditRecord, showToast }) {
                 <th>Quê Quán</th>
                 <th>Nơi Thường Trú</th>
                 <th>Trạng Thái</th>
-                <th style={{ width: '130px', textAlign: 'center' }}>Hành Động</th>
+                <th style={{ width: '235px', textAlign: 'center' }}>Hành Động</th>
               </tr>
             </thead>
             <tbody>
@@ -145,10 +144,10 @@ export default function ResultsTab({ onEditRecord, showToast }) {
                   <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>{row.full_name}</td>
                   <td>{row.dob || '—'}</td>
                   <td>{row.gender || '—'}</td>
-                  <td style={{ fontSize: '0.82rem', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <td style={{ fontSize: '0.82rem', maxWidth: '170px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {row.origin_location || '—'}
                   </td>
-                  <td style={{ fontSize: '0.82rem', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <td style={{ fontSize: '0.82rem', maxWidth: '190px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {row.residence || '—'}
                   </td>
                   <td>
@@ -157,20 +156,41 @@ export default function ResultsTab({ onEditRecord, showToast }) {
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', gap: '5px', justifyContent: 'center', flexWrap: 'wrap' }}>
                       <button
                         type="button"
                         className="btn btn-outline"
-                        style={{ padding: '5px 9px', fontSize: '0.8rem' }}
-                        title="Xem và sửa hồ sơ"
+                        style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                        title="Xem chi tiết & sửa hồ sơ"
                         onClick={() => onEditRecord(row)}
                       >
+                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         Sửa
                       </button>
                       <button
                         type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '4px 8px', fontSize: '0.78rem', color: '#1877f2', borderColor: '#bfdbfe', background: '#eff6ff', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                        title="Tải lại vào Form Tab 1 để kiểm tra hoặc quét lại"
+                        onClick={() => onLoadToScan && onLoadToScan(row)}
+                      >
+                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                        Nạp Form
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '4px 8px', fontSize: '0.78rem', color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                        title="Xuất phiếu thông tin và ảnh dưới dạng PDF"
+                        onClick={() => exportCccdPdf(row)}
+                      >
+                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: '#dc2626' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                        Xuất PDF
+                      </button>
+                      <button
+                        type="button"
                         className="btn btn-danger"
-                        style={{ padding: '5px 9px', fontSize: '0.8rem' }}
+                        style={{ padding: '4px 8px', fontSize: '0.78rem' }}
                         title="Xóa hồ sơ khỏi CSDL"
                         onClick={() => handleDelete(row.id, row.id_number)}
                       >

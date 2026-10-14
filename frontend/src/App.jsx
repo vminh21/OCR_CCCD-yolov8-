@@ -23,6 +23,15 @@ export default function App() {
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
 
+  // Loaded record for Tab 1 scanning/editing
+  const [loadedRecordForScan, setLoadedRecordForScan] = useState(null);
+
+  const handleLoadRecordToScan = (record) => {
+    setLoadedRecordForScan(record);
+    setActiveTab('tab-scan');
+    showToast(`✅ Đã nạp hồ sơ #${record.id} (${record.full_name || ''}) vào Form Tab 1!`, true);
+  };
+
   // Toast
   const [toast, setToast] = useState({ message: '', isSuccess: true });
   const toastTimerRef = useRef(null);
@@ -162,6 +171,8 @@ export default function App() {
           <ScanTab
             onOpenCamModal={() => setIsCameraOpen(true)}
             onSaveSuccess={() => {}}
+            loadedRecord={loadedRecordForScan}
+            onClearLoadedRecord={() => setLoadedRecordForScan(null)}
             showToast={showToast}
           />
         </div>
@@ -171,6 +182,7 @@ export default function App() {
         <div id="tab-results" className="tab-panel active">
           <ResultsTab
             onEditRecord={(record) => setEditingRecord(record)}
+            onLoadToScan={handleLoadRecordToScan}
             showToast={showToast}
           />
         </div>
@@ -213,10 +225,7 @@ export default function App() {
         record={editingRecord}
         onClose={() => setEditingRecord(null)}
         onSaveSuccess={() => {}}
-        onOpenInScanTab={(record) => {
-          setActiveTab('tab-scan');
-          showToast('✅ Đã tải thông tin vào Tab 1 để kiểm tra!', true);
-        }}
+        onOpenInScanTab={handleLoadRecordToScan}
         showToast={showToast}
       />
 

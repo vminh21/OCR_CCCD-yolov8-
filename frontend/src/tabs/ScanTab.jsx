@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { apiPredictImage, apiUpdateResult } from '../services/api';
 
-export default function ScanTab({ onOpenCamModal, onSaveSuccess, showToast }) {
+export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, onClearLoadedRecord, showToast }) {
   const [file, setFile] = useState(null);
   const [previewSrc, setPreviewSrc] = useState('');
   const [status, setStatus] = useState({ state: 'ready', message: '' }); // ready | loading | success | error
@@ -27,6 +27,32 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, showToast }) {
   const fileInputRef = useRef(null);
   const nativeCameraInputRef = useRef(null);
   const dropzoneRef = useRef(null);
+
+  // Lắng nghe khi người dùng bấm "Tải vào Form Tab 1 để quét lại" từ Bảng kết quả (Tab 2)
+  React.useEffect(() => {
+    if (loadedRecord) {
+      setFormData({
+        so_cccd: loadedRecord.id_number || '',
+        ho_ten: loadedRecord.full_name || '',
+        ngay_sinh: loadedRecord.dob || '',
+        gioi_tinh: loadedRecord.gender || '',
+        quoc_tich: loadedRecord.nationality || 'Việt Nam',
+        que_quan: loadedRecord.origin_location || '',
+        noi_ctru: loadedRecord.residence || '',
+        ngay_het_han: loadedRecord.expiry_date || '',
+      });
+      setCurrentResultId(loadedRecord.id);
+      setCurrentScanId(loadedRecord.history_id || loadedRecord.id);
+      const imgPath = loadedRecord.crop_image_path || '/media/cccd_fields_visualization.jpg';
+      setPreviewSrc(imgPath + '?t=' + Date.now());
+      setSourceBadge('📂 Hồ sơ #' + loadedRecord.id);
+      setStatus({
+        state: 'ready',
+        message: `ℹ️ Đã nạp dữ liệu hồ sơ #${loadedRecord.id} (${loadedRecord.full_name || ''}) vào Form. Bạn có thể chỉnh sửa trực tiếp và bấm 'Xác Nhận & Lưu' hoặc chọn file mới để quét lại.`,
+      });
+      if (onClearLoadedRecord) onClearLoadedRecord();
+    }
+  }, [loadedRecord]);
 
   const handleFieldChange = (field, val) => {
     setFormData((prev) => ({ ...prev, [field]: val }));
