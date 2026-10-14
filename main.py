@@ -2571,15 +2571,18 @@ async def predict_api(
         try:
             result = process_cccd(temp_path)
         except ValueError as ve:
+            import traceback
             return JSONResponse(
                 status_code=400,
-                content={"error": str(ve)}
+                content={"error": str(ve), "traceback": traceback.format_exc()}
             )
         except Exception as ex:
+            import traceback
             return JSONResponse(
                 status_code=422,
-                content={"error": f"Lỗi xử lý: {str(ex)}"}
+                content={"error": f"Lỗi xử lý: {str(ex)}", "traceback": traceback.format_exc()}
             )
+
         finally:
             if temp_path.exists():
                 temp_path.unlink()
