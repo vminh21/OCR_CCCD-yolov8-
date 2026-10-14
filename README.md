@@ -8,6 +8,7 @@ sdk_version: 5.20.0
 app_file: app.py
 pinned: false
 license: apache-2.0
+startup_duration_timeout: 30m
 ---
 
 # 🪪 CCCD OCR — Hệ Thống Nhận Diện & Trích Xuất Thẻ Căn Cước Công Dân
