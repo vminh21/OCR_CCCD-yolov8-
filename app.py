@@ -1,9 +1,8 @@
-# ==============================================================
-# app.py — Giao diện Facebook UI CCCD OCR 100% Trên Hugging Face
-# ==============================================================
+import spaces
 import os
 import sys
 import types
+import subprocess
 from pathlib import Path
 
 # Cấu hình thư mục ghi tạm cho Ultralytics YOLO
@@ -24,9 +23,7 @@ import gradio as gr
 from main import app as fastapi_app
 from src.core.pipeline import process_cccd
 
-# Tích hợp ZeroGPU Decorator để thỏa mãn điều kiện kiểm tra của Hugging Face
 try:
-    import spaces
     gpu_decorator = spaces.GPU(duration=60)
     print("✅ Hugging Face ZeroGPU (@spaces.GPU) đã được kích hoạt thành công!")
 except Exception as e:
@@ -54,15 +51,26 @@ with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     btn = gr.Button("Trích xuất thông tin")
     btn.click(fn=predict_gpu, inputs=[inp], outputs=[out])
 
-# Đánh dấu demo đã chạy để Gradio không tự động gọi launch() tranh chấp cổng 7860
 demo.is_running = True
 demo.launched = True
 
 # 2. Gắn Gradio vào đường dẫn phụ "/gradio"
-# Giữ NGUYÊN 100% trang chủ "/" và toàn bộ các API cho Giao Diện Facebook UI
 app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR Facebook UI server running on 0.0.0.0:{port}")
+    try:
+        print("--- PROCESSES ---")
+        print(subprocess.check_output(["ps", "aux"]).decode())
+    except Exception as e:
+        print("ps aux err:", e)
+    try:
+        print("--- SS / NETSTAT ---")
+        print(subprocess.check_output(["ss", "-tlpn"]).decode())
+    except Exception as e:
+        print("ss err:", e)
+    print("--- ENV ---")
+    print({k: v for k, v in os.environ.items() if any(x in k for x in ["PORT", "GRADIO", "SPACE", "ZERO"])})
     uvicorn.run(app, host="0.0.0.0", port=port)
+
