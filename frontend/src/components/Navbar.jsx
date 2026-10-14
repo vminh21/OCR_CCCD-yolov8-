@@ -45,23 +45,23 @@ export default function Navbar({ currentUser, onOpenProfile, onOpenPasswordModal
           </span>
         </div>
 
-        <button type="button" className="btn btn-outline" onClick={onOpenPasswordModal}>
+        <button type="button" className="btn btn-outline" onClick={onOpenPasswordModal} title="Đổi mật khẩu tài khoản">
           <svg className="svg-icon" viewBox="0 0 24 24" style={{ color: '#6366f1' }}>
             <circle cx="7.5" cy="15.5" r="4.5" />
             <path d="m21 3-9.5 9.5" />
             <path d="m15.5 7.5 3 3" />
             <path d="m18.5 4.5 2 2" />
           </svg>
-          Đổi mật khẩu
+          <span className="nav-btn-text">Đổi mật khẩu</span>
         </button>
 
-        <button type="button" className="btn btn-danger" onClick={onLogout}>
+        <button type="button" className="btn btn-danger" onClick={onLogout} title="Đăng xuất khỏi hệ thống">
           <svg className="svg-icon" viewBox="0 0 24 24">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          Đăng xuất
+          <span className="nav-btn-text">Đăng xuất</span>
         </button>
       </div>
     </header>

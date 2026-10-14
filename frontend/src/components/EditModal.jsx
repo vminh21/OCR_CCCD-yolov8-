@@ -140,7 +140,7 @@ export default function EditModal({ isOpen, record, onClose, onSaveSuccess, onOp
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="modal-actions" style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-outline"

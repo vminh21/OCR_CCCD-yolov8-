@@ -93,23 +93,15 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
           </span>
         </h2>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ position: 'relative' }}>
+        <div className="search-filter-bar">
+          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '8px', flex: '1 1 auto' }}>
+            <div style={{ position: 'relative', flex: '1 1 auto' }}>
               <input
                 type="text"
                 placeholder="Tìm theo Số CCCD hoặc Họ tên..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  padding: '8px 14px 8px 34px',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  fontSize: '0.88rem',
-                  width: '280px',
-                  background: '#ffffff',
-                  outline: 'none',
-                }}
+                className="search-input"
               />
               <svg
                 className="svg-icon"
@@ -164,7 +156,7 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
           <p style={{ marginTop: '4px', fontSize: '0.85rem' }}>Hãy tải ảnh hoặc quét thẻ tại Tab 1 để bắt đầu!</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <div className="table-responsive">
           <table className="data-table" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
             <thead>
               <tr>

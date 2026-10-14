@@ -13,10 +13,32 @@ import ProfileTab from './tabs/ProfileTab';
 
 import { getToken, removeToken, apiGetMe } from './services/api';
 
+const TAB_MAP = {
+  'tab-scan': '#scan',
+  'tab-results': '#results',
+  'tab-stats': '#stats',
+  'tab-profile': '#profile',
+};
+
+const HASH_MAP = {
+  '#scan': 'tab-scan',
+  '#results': 'tab-results',
+  '#stats': 'tab-stats',
+  '#profile': 'tab-profile',
+};
+
+const getTabFromHash = () => {
+  if (typeof window !== 'undefined') {
+    const hash = window.location.hash;
+    if (HASH_MAP[hash]) return HASH_MAP[hash];
+  }
+  return 'tab-scan';
+};
+
 export default function App() {
   const [token, setTokenState] = useState(getToken());
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('tab-scan'); // tab-scan | tab-results | tab-stats | tab-profile
+  const [activeTab, setActiveTab] = useState(getTabFromHash);
 
   // Modals
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -26,9 +48,24 @@ export default function App() {
   // Loaded record for Tab 1 scanning/editing
   const [loadedRecordForScan, setLoadedRecordForScan] = useState(null);
 
+  // Điều hướng Tab kèm cập nhật Browser History (hỗ trợ nút Back / Forward & Reload trang)
+  const navigateToTab = (tabId, replace = false) => {
+    const targetHash = TAB_MAP[tabId] || '#scan';
+    if (typeof window !== 'undefined') {
+      if (window.location.hash !== targetHash) {
+        if (replace) {
+          window.history.replaceState(null, '', targetHash);
+        } else {
+          window.history.pushState(null, '', targetHash);
+        }
+      }
+    }
+    setActiveTab(tabId);
+  };
+
   const handleLoadRecordToScan = (record) => {
     setLoadedRecordForScan(record);
-    setActiveTab('tab-scan');
+    navigateToTab('tab-scan');
     showToast(`✅ Đã nạp hồ sơ #${record.id} (${record.full_name || ''}) vào Form Tab 1!`, true);
   };
 
@@ -43,6 +80,34 @@ export default function App() {
       setToast({ message: '', isSuccess: true });
     }, 3800);
   };
+
+  // Lắng nghe sự kiện Back / Forward của trình duyệt (popstate & hashchange)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const hash = window.location.hash;
+      const tab = HASH_MAP[hash] || 'tab-scan';
+      setActiveTab(tab);
+      // Khi người dùng bấm Back/Forward, tự động đóng các modal đang mở
+      setEditingRecord(null);
+      setIsCameraOpen(false);
+      setIsPasswordOpen(false);
+    };
+
+    if (typeof window !== 'undefined') {
+      if (!window.location.hash || !HASH_MAP[window.location.hash]) {
+        const defaultHash = TAB_MAP[activeTab] || '#scan';
+        window.history.replaceState(null, '', defaultHash);
+      }
+    }
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
 
   useEffect(() => {
     // Tự động chuyển hướng từ 0.0.0.0 sang 127.0.0.1 để tránh lỗi Not Secure
@@ -107,7 +172,7 @@ export default function App() {
       {/* NAVBAR */}
       <Navbar
         currentUser={currentUser}
-        onOpenProfile={() => setActiveTab('tab-profile')}
+        onOpenProfile={() => navigateToTab('tab-profile')}
         onOpenPasswordModal={() => setIsPasswordOpen(true)}
         onLogout={handleLogout}
       />
@@ -117,7 +182,7 @@ export default function App() {
         <button
           type="button"
           className={`tab-btn ${activeTab === 'tab-scan' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tab-scan')}
+          onClick={() => navigateToTab('tab-scan')}
         >
           <svg className="svg-icon" viewBox="0 0 24 24">
             <rect x="3" y="3" width="18" height="18" rx="4" />
@@ -129,7 +194,7 @@ export default function App() {
         <button
           type="button"
           className={`tab-btn ${activeTab === 'tab-results' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tab-results')}
+          onClick={() => navigateToTab('tab-results')}
         >
           <svg className="svg-icon" viewBox="0 0 24 24">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -143,7 +208,7 @@ export default function App() {
         <button
           type="button"
           className={`tab-btn ${activeTab === 'tab-stats' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tab-stats')}
+          onClick={() => navigateToTab('tab-stats')}
         >
           <svg className="svg-icon" viewBox="0 0 24 24">
             <line x1="18" y1="20" x2="18" y2="10" />
@@ -155,7 +220,7 @@ export default function App() {
         <button
           type="button"
           className={`tab-btn ${activeTab === 'tab-profile' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tab-profile')}
+          onClick={() => navigateToTab('tab-profile')}
         >
           <svg className="svg-icon" viewBox="0 0 24 24">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
