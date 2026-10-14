@@ -37,7 +37,7 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
   };
 
   const handleDelete = async (id, idNumber) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ CCCD #${id} (${idNumber}) không?`)) {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa hồ sơ CCCD #${id} (${idNumber}) khỏi hệ thống?`)) {
       return;
     }
 
@@ -55,48 +55,102 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
     }
   };
 
+  const formatVnDate = (dateStr) => {
+    if (!dateStr) return '—';
+    const clean = String(dateStr).trim();
+    if (clean.includes('-')) {
+      const parts = clean.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+    return clean;
+  };
+
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h2 style={{ margin: 0, padding: 0 }}>
-            <span className="card-title-left">
-              <span className="card-icon-badge" style={{ background: '#eff6ff', color: 'var(--primary)' }}>
-                <svg className="svg-icon" viewBox="0 0 24 24">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <line x1="10" y1="9" x2="8" y2="9" />
-                </svg>
-              </span>
-              <span>Bảng Lưu Kết Quả Thẻ CCCD ({total} hồ sơ)</span>
+      {/* HEADER CARD: TIÊU ĐỀ + TÌM KIẾM + LÀM MỚI (CHUẨN FACEBOOK UI) */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <h2 style={{ margin: 0, padding: 0 }}>
+          <span className="card-title-left">
+            <span className="card-icon-badge" style={{ background: '#eff6ff', color: 'var(--primary)' }}>
+              <svg className="svg-icon" viewBox="0 0 24 24">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
             </span>
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '4px 0 0 0' }}>
-            Hệ thống lưu trữ 8 trường dữ liệu CCCD, hỗ trợ sửa, nạp lại vào Form Tab 1 và xuất file PDF.
-          </p>
-        </div>
+            <span>Bảng Lưu Kết Quả Thẻ CCCD ({total} hồ sơ)</span>
+          </span>
+        </h2>
 
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="text"
-            placeholder="Tìm theo Số CCCD hoặc Họ tên..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              padding: '8px 14px',
-              border: '1px solid var(--border-color)',
-              borderRadius: '6px',
-              fontSize: '0.88rem',
-              width: '260px',
-              outline: 'none',
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Tìm theo Số CCCD hoặc Họ tên..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  padding: '8px 14px 8px 34px',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  fontSize: '0.88rem',
+                  width: '280px',
+                  background: '#ffffff',
+                  outline: 'none',
+                }}
+              />
+              <svg
+                className="svg-icon"
+                viewBox="0 0 24 24"
+                style={{
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '16px',
+                  height: '16px',
+                  color: '#94a3b8',
+                }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px' }}>
+              Tìm Kiếm
+            </button>
+          </form>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ padding: '8px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            title="Tải lại danh sách"
+            onClick={() => {
+              setSearch('');
+              fetchResults('');
             }}
-          />
-          <button type="submit" className="btn btn-primary" style={{ padding: '8px 14px' }}>
-            Tìm Kiếm
+          >
+            <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '14px', height: '14px' }}>
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            Làm mới
           </button>
-        </form>
+        </div>
       </div>
 
       {loading ? (
@@ -110,90 +164,249 @@ export default function ResultsTab({ onEditRecord, onLoadToScan, showToast }) {
           <p style={{ marginTop: '4px', fontSize: '0.85rem' }}>Hãy tải ảnh hoặc quét thẻ tại Tab 1 để bắt đầu!</p>
         </div>
       ) : (
-        <div className="table-responsive">
-          <table className="custom-table">
+        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <table className="data-table" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
             <thead>
               <tr>
-                <th style={{ width: '50px' }}>ID</th>
-                <th style={{ width: '85px' }}>Ảnh Cắt</th>
-                <th>Số CCCD (12 số)</th>
-                <th>Họ và Tên</th>
-                <th>Ngày Sinh</th>
-                <th>Giới Tính</th>
-                <th>Quê Quán</th>
-                <th>Nơi Thường Trú</th>
-                <th>Trạng Thái</th>
-                <th style={{ width: '235px', textAlign: 'center' }}>Hành Động</th>
+                <th style={{ width: '50px', textAlign: 'center' }}>#ID</th>
+                <th style={{ width: '75px', textAlign: 'center' }}>Xem Thẻ</th>
+                <th style={{ width: '135px' }}>Số CCCD</th>
+                <th style={{ minWidth: '150px' }}>Họ Và Tên</th>
+                <th style={{ width: '100px' }}>Ngày Sinh</th>
+                <th style={{ width: '80px', textAlign: 'center' }}>Giới Tính</th>
+                <th style={{ minWidth: '160px' }}>Quê Quán</th>
+                <th style={{ minWidth: '170px' }}>Nơi Thường Trú</th>
+                <th style={{ width: '90px', textAlign: 'center' }}>Trạng Thái</th>
+                <th style={{ width: '280px', textAlign: 'center' }}>Thao Tác</th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => (
                 <tr key={row.id}>
-                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>#{row.id}</td>
-                  <td>
+                  {/* #ID */}
+                  <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--primary)' }}>
+                    #{row.id}
+                  </td>
+
+                  {/* THUMBNAIL ẢNH CẮT */}
+                  <td style={{ textAlign: 'center' }}>
                     <img
                       src={row.crop_image_path ? `${row.crop_image_path}?t=${row.id}` : '/media/cccd_fields_visualization.jpg'}
                       alt="Card Crop"
-                      style={{ width: '64px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                      onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 40" fill="%23e4e6eb"><rect width="64" height="40"/><text x="50%" y="50%" fill="%2365676b" font-size="9" text-anchor="middle" dy=".3em">CCCD</text></svg>'; }}
+                      title="Bấm để xem và sửa chi tiết thẻ"
+                      onClick={() => onEditRecord(row)}
+                      style={{
+                        width: '54px',
+                        height: '34px',
+                        objectFit: 'cover',
+                        borderRadius: '4px',
+                        border: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        display: 'inline-block',
+                        verticalAlign: 'middle',
+                        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'scale(1.1)';
+                        e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'scale(1)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      onError={(e) => {
+                        e.target.src =
+                          'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 34" fill="%23e4e6eb"><rect width="54" height="34"/><text x="50%" y="50%" fill="%2365676b" font-size="8" text-anchor="middle" dy=".3em">CCCD</text></svg>';
+                      }}
                     />
                   </td>
+
+                  {/* SỐ CCCD */}
                   <td>
-                    <strong style={{ color: 'var(--primary)', letterSpacing: '0.5px' }}>{row.id_number}</strong>
+                    <span
+                      style={{
+                        fontFamily: 'monospace, monospace',
+                        fontWeight: 700,
+                        color: 'var(--primary)',
+                        fontSize: '0.92rem',
+                        letterSpacing: '0.4px',
+                      }}
+                    >
+                      {row.id_number}
+                    </span>
                   </td>
-                  <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>{row.full_name}</td>
-                  <td>{row.dob || '—'}</td>
-                  <td>{row.gender || '—'}</td>
-                  <td style={{ fontSize: '0.82rem', maxWidth: '170px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+
+                  {/* HỌ VÀ TÊN */}
+                  <td style={{ fontWeight: 800, color: '#1c1e21', textTransform: 'uppercase', letterSpacing: '0.2px' }}>
+                    {row.full_name}
+                  </td>
+
+                  {/* NGÀY SINH (DD/MM/YYYY) */}
+                  <td style={{ whiteSpace: 'nowrap', color: '#475569', fontWeight: 500 }}>
+                    {formatVnDate(row.dob)}
+                  </td>
+
+                  {/* GIỚI TÍNH */}
+                  <td style={{ textAlign: 'center' }}>
+                    {row.gender ? (
+                      <span
+                        className="badge"
+                        style={{
+                          background: row.gender.toUpperCase().includes('NAM') ? '#eff6ff' : '#fdf2f8',
+                          color: row.gender.toUpperCase().includes('NAM') ? '#1d4ed8' : '#be185d',
+                          border: `1px solid ${row.gender.toUpperCase().includes('NAM') ? '#bfdbfe' : '#fbcfe8'}`,
+                        }}
+                      >
+                        {row.gender}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+
+                  {/* QUÊ QUÁN */}
+                  <td
+                    style={{
+                      maxWidth: '180px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      color: '#475569',
+                      fontSize: '0.84rem',
+                    }}
+                    title={row.origin_location || ''}
+                  >
                     {row.origin_location || '—'}
                   </td>
-                  <td style={{ fontSize: '0.82rem', maxWidth: '190px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+
+                  {/* NƠI THƯỜNG TRÚ */}
+                  <td
+                    style={{
+                      maxWidth: '190px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      color: '#475569',
+                      fontSize: '0.84rem',
+                    }}
+                    title={row.residence || ''}
+                  >
                     {row.residence || '—'}
                   </td>
-                  <td>
+
+                  {/* TRẠNG THÁI */}
+                  <td style={{ textAlign: 'center' }}>
                     <span className={`badge ${row.status === 'EDITED' ? 'badge-warning' : 'badge-success'}`}>
                       {row.status === 'EDITED' ? 'Đã sửa' : 'AI Chuẩn'}
                     </span>
                   </td>
+
+                  {/* HÀNH ĐỘNG: 4 NÚT THẲNG HÀNG TRÊN 1 DÒNG CHUẨN FACEBOOK */}
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '5px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '5px', justifyContent: 'center', alignItems: 'center' }}>
+                      {/* SỬA */}
                       <button
                         type="button"
                         className="btn btn-outline"
-                        style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                        title="Xem chi tiết & sửa hồ sơ"
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.78rem',
+                          height: '28px',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                        title="Xem chi tiết & chỉnh sửa"
                         onClick={() => onEditRecord(row)}
                       >
-                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: 'var(--primary)' }}>
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
                         Sửa
                       </button>
+
+                      {/* NẠP FORM */}
                       <button
                         type="button"
                         className="btn btn-outline"
-                        style={{ padding: '4px 8px', fontSize: '0.78rem', color: '#1877f2', borderColor: '#bfdbfe', background: '#eff6ff', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                        title="Tải lại vào Form Tab 1 để kiểm tra hoặc quét lại"
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.78rem',
+                          height: '28px',
+                          color: '#0284c7',
+                          borderColor: '#bae6fd',
+                          background: '#f0f9ff',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                        title="Tải vào Form Tab 1 để quét hoặc kiểm tra lại"
                         onClick={() => onLoadToScan && onLoadToScan(row)}
                       >
-                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: '#0284c7' }}>
+                          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                          <path d="M21 3v5h-5" />
+                          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                          <path d="M8 16H3v5" />
+                        </svg>
                         Nạp Form
                       </button>
+
+                      {/* XUẤT PDF */}
                       <button
                         type="button"
                         className="btn btn-outline"
-                        style={{ padding: '4px 8px', fontSize: '0.78rem', color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.78rem',
+                          height: '28px',
+                          color: '#dc2626',
+                          borderColor: '#fecaca',
+                          background: '#fef2f2',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
                         title="Xuất phiếu thông tin và ảnh dưới dạng PDF"
                         onClick={() => exportCccdPdf(row)}
                       >
-                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: '#dc2626' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: '#dc2626' }}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                          <line x1="10" y1="9" x2="8" y2="9" />
+                        </svg>
                         Xuất PDF
                       </button>
+
+                      {/* XÓA */}
                       <button
                         type="button"
-                        className="btn btn-danger"
-                        style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                        className="btn btn-outline"
+                        style={{
+                          padding: '4px 7px',
+                          fontSize: '0.78rem',
+                          height: '28px',
+                          color: '#ef4444',
+                          borderColor: '#fca5a5',
+                          background: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '2px',
+                        }}
                         title="Xóa hồ sơ khỏi CSDL"
                         onClick={() => handleDelete(row.id, row.id_number)}
                       >
+                        <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '12px', height: '12px', color: '#ef4444' }}>
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
                         Xóa
                       </button>
                     </div>
