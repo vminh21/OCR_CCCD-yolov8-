@@ -218,7 +218,7 @@ def edit_cccd_result_and_record_corrections(
     if not result:
         raise ValueError("Không tìm thấy hồ sơ CCCD cần chỉnh sửa!")
 
-    has_changed = False
+    changed_count = 0
     for field_name, new_val in edit_data.dict(exclude_unset=True).items():
         if new_val is not None:
             old_val = getattr(result, field_name)
@@ -226,6 +226,7 @@ def edit_cccd_result_and_record_corrections(
             str_new = str(new_val)
 
             if str_old != str_new:
+                changed_count += 1
                 # Ghi nhận vào BẢNG 5: ai_corrections để đánh giá độ đúng của AI
                 correction = AICorrection(
                     history_id=result.history_id,
@@ -244,13 +245,26 @@ def edit_cccd_result_and_record_corrections(
                     parsed_val = parse_date_safe(new_val)
 
                 setattr(result, field_name, parsed_val)
-                has_changed = True
 
-    if has_changed:
-        if result.scan:
-            result.scan.status = "EDITED"
+    if changed_count > 0:
         stat = get_user_statistics(db, user_id)
         stat.edited_scans += 1
+
+        if result.scan:
+            result.scan.status = "EDITED"
+            old_conf = float(result.scan.confidence_score or 0.90)
+            
+            # CÀNG SỬA NHIỀU THÌ ĐỘ TIN CẬY CỦA HỒ SƠ CÀNG THẤP
+            # Mỗi trường người dùng phải sửa thủ công sẽ làm giảm độ tin cậy tương ứng với tỷ lệ 1/8
+            penalty_ratio = changed_count / 8.0
+            new_conf = max(0.10, round(old_conf * (1.0 - penalty_ratio), 4))
+            result.scan.confidence_score = new_conf
+
+            # Cập nhật độ tin cậy trung bình của toàn hệ thống
+            if stat.total_scans > 0:
+                diff_percent = (new_conf - old_conf) * 100.0
+                stat.avg_confidence = max(0.0, round(stat.avg_confidence + (diff_percent / stat.total_scans), 2))
+
         db.commit()
         db.refresh(result)
 

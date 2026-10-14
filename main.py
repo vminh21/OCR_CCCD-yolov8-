@@ -897,9 +897,13 @@ HTML_UI = """
                         </div>
 
                         <div style="margin-top: 20px; display: flex; gap: 12px;">
-                            <button type="submit" id="btn-save" class="btn btn-success" style="flex: 1; padding: 13px;" disabled>
+                            <button type="submit" id="btn-save" class="btn btn-success" style="flex: 2; padding: 13px;" disabled>
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                                 Xác Nhận & Lưu Kết Quả Vào CSDL
+                            </button>
+                            <button type="button" class="btn btn-outline" style="flex: 1; padding: 13px;" onclick="resetScanState(true)">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                                Làm Mới
                             </button>
                         </div>
                     </form>
@@ -1988,7 +1992,7 @@ HTML_UI = """
         function uploadImage(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|avi|mov|mkv|webm)$/i.test(file.name || '');
+            const isVideo = (file.type && file.type.startsWith('video/')) || /\\.(mp4|avi|mov|mkv|webm)$/i.test(file.name || '');
             processImageFile(file, false, isVideo ? 'VIDEO' : 'IMAGE');
         }
 
@@ -2129,10 +2133,13 @@ HTML_UI = """
                 }
 
                 if (res.ok) {
-                    showToast('✅ Đã lưu chỉnh sửa vào CSDL và ghi nhận độ đúng của AI!');
+                    showToast('✅ Đã lưu kết quả vào CSDL và ghi nhận độ đúng của AI!');
+                    resetScanState(false);
                     const status = document.getElementById('status');
-                    status.className = 'status success';
-                    status.innerText = '✅ Hồ sơ đã được cập nhật chính thức vào CSDL (Bảng cccd_results).';
+                    if (status) {
+                        status.className = 'status success';
+                        status.innerText = '✅ Hồ sơ vừa quét đã được lưu thành công vào CSDL. Sẵn sàng quét ảnh tiếp theo!';
+                    }
                 } else {
                     const err = await res.json();
                     let errMsg = 'Thất bại';
@@ -2147,6 +2154,59 @@ HTML_UI = """
                 }
             } catch (e) {
                 showToast('❌ Lỗi kết nối server: ' + e.message, false);
+            }
+        }
+
+        // ========================================================
+        // 4. LÀM MỚI FORM ĐỂ QUÉT ẢNH TIẾP THEO
+        // ========================================================
+        function resetScanState(showFeedback = false) {
+            document.getElementById('val-so_cccd').value = '';
+            document.getElementById('val-ho_ten').value = '';
+            document.getElementById('val-ngay_sinh').value = '';
+            document.getElementById('val-gioi_tinh').value = '';
+            document.getElementById('val-quoc_tich').value = 'Việt Nam';
+            document.getElementById('val-que_quan').value = '';
+            document.getElementById('val-noi_ctru').value = '';
+            document.getElementById('val-ngay_het_han').value = '';
+
+            const preview = document.getElementById('preview');
+            if (preview) {
+                preview.src = '';
+                preview.style.display = 'none';
+            }
+
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) fileInput.value = '';
+
+            const status = document.getElementById('status');
+            if (status) {
+                status.className = 'status';
+                status.innerText = '';
+            }
+
+            const sourceBadge = document.getElementById('source-badge');
+            if (sourceBadge) {
+                sourceBadge.innerText = 'Sẵn sàng';
+                sourceBadge.className = 'badge badge-success';
+            }
+
+            const btnSave = document.getElementById('btn-save');
+            if (btnSave) btnSave.disabled = true;
+
+            currentScanId = null;
+            currentResultId = null;
+
+            if (typeof loadStatsAndCorrections === 'function') loadStatsAndCorrections();
+            if (typeof loadResultsList === 'function') loadResultsList();
+
+            if (showFeedback) {
+                showToast('Đã làm mới form, sẵn sàng nhận diện ảnh tiếp theo!');
+            }
+
+            const dropzone = document.getElementById('dropzone');
+            if (dropzone) {
+                dropzone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
 
