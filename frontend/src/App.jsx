@@ -9,13 +9,14 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 import ScanTab from './tabs/ScanTab';
 import ResultsTab from './tabs/ResultsTab';
 import StatisticsTab from './tabs/StatisticsTab';
+import ProfileTab from './tabs/ProfileTab';
 
 import { getToken, removeToken, apiGetMe } from './services/api';
 
 export default function App() {
   const [token, setTokenState] = useState(getToken());
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('tab-scan'); // tab-scan | tab-results | tab-stats
+  const [activeTab, setActiveTab] = useState('tab-scan'); // tab-scan | tab-results | tab-stats | tab-profile
 
   // Modals
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -97,6 +98,7 @@ export default function App() {
       {/* NAVBAR */}
       <Navbar
         currentUser={currentUser}
+        onOpenProfile={() => setActiveTab('tab-profile')}
         onOpenPasswordModal={() => setIsPasswordOpen(true)}
         onLogout={handleLogout}
       />
@@ -141,6 +143,17 @@ export default function App() {
           </svg>
           3. Thống Kê & Độ Đúng Của AI
         </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'tab-profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tab-profile')}
+        >
+          <svg className="svg-icon" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          4. Quản Lý Tài Khoản
+        </button>
       </div>
 
       {/* TAB CONTENT PANELS */}
@@ -166,6 +179,16 @@ export default function App() {
       {activeTab === 'tab-stats' && (
         <div id="tab-stats" className="tab-panel active">
           <StatisticsTab showToast={showToast} />
+        </div>
+      )}
+
+      {activeTab === 'tab-profile' && (
+        <div id="tab-profile" className="tab-panel active">
+          <ProfileTab
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            showToast={showToast}
+          />
         </div>
       )}
 

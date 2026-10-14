@@ -1,7 +1,7 @@
 // frontend/src/components/Navbar.jsx
 import React from 'react';
 
-export default function Navbar({ currentUser, onOpenPasswordModal, onLogout }) {
+export default function Navbar({ currentUser, onOpenProfile, onOpenPasswordModal, onLogout }) {
   return (
     <header>
       <div className="logo-area">
@@ -24,7 +24,13 @@ export default function Navbar({ currentUser, onOpenPasswordModal, onLogout }) {
       </div>
 
       <div className="user-nav">
-        <div className="user-badge" id="user-display">
+        <div
+          className="user-badge"
+          id="user-display"
+          onClick={onOpenProfile}
+          style={{ cursor: 'pointer' }}
+          title="Bấm để mở Quản Lý Tài Khoản"
+        >
           <div className="user-avatar-circle">
             <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '14px', height: '14px' }}>
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
