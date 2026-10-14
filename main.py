@@ -4,6 +4,10 @@ import base64
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 os.environ["YOLO_CONFIG_DIR"] = "/tmp"
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("main")
+
 import sys
 import types
 try:
@@ -1548,7 +1552,7 @@ HTML_UI = """
                 } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                     friendlyMsg = '⚠️ Không tìm thấy thiết bị Camera nào trên máy tính!';
                 } else if (err.name === 'OverconstrainedError') {
-                    friendlyMsg = '⚠️ Camera không hỗ trợ độ phân giải yêu cầu. Đang tự động thử lại...';
+                    friendlyMsg = '⚠️ Camera không hỗ trợ độ phân giải yêu cầu. Vui lòng thử lại!';
                 }
                 showToast(friendlyMsg, false);
                 closeCameraModal();
@@ -1557,14 +1561,20 @@ HTML_UI = """
 
         async function startCameraStream(preferredDeviceId = null) {
             if (cameraStream) {
-                cameraStream.getTracks().forEach(t => t.stop());
+                try {
+                    cameraStream.getTracks().forEach(t => t.stop());
+                } catch(e) {}
                 cameraStream = null;
             }
 
             const video = document.getElementById('camera-video');
+            video.muted = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
+            video.setAttribute('muted', '');
             let stream = null;
 
-            // Thử lần 1: Yêu cầu độ phân giải và camera mong muốn
+            // Thử lần 1: Yêu cầu độ phân giải lý tưởng
             const constraintsTier1 = {
                 video: {
                     width: { ideal: 1280 },
@@ -1575,8 +1585,6 @@ HTML_UI = """
 
             if (preferredDeviceId && typeof preferredDeviceId === 'string' && preferredDeviceId.length > 0) {
                 constraintsTier1.video.deviceId = { exact: preferredDeviceId };
-            } else {
-                constraintsTier1.video.facingMode = { ideal: 'environment' };
             }
 
             try {
@@ -1594,9 +1602,21 @@ HTML_UI = """
 
             cameraStream = stream;
             video.srcObject = cameraStream;
-            await video.play();
+            
+            // Phát video an toàn tránh lỗi AbortError
+            try {
+                await video.play();
+            } catch (playErr) {
+                console.warn('Direct play failed, waiting for metadata...', playErr);
+                await new Promise((resolve) => {
+                    video.onloadeddata = () => {
+                        video.play().then(resolve).catch(resolve);
+                    };
+                    setTimeout(resolve, 800);
+                });
+            }
 
-            clearInterval(cameraProbeInterval);
+            if (cameraProbeInterval) clearInterval(cameraProbeInterval);
             cameraProbeInterval = setInterval(runCameraProbeLoop, 450);
         }
 
@@ -1622,12 +1642,19 @@ HTML_UI = """
             }
 
             if (cameraStream) {
-                cameraStream.getTracks().forEach(t => t.stop());
+                try {
+                    cameraStream.getTracks().forEach(t => t.stop());
+                } catch(e) {}
                 cameraStream = null;
             }
 
             const video = document.getElementById('camera-video');
-            if (video) video.srcObject = null;
+            if (video) {
+                try {
+                    video.pause();
+                    video.srcObject = null;
+                } catch(e) {}
+            }
 
             const countdown = document.getElementById('camera-countdown');
             if (countdown) countdown.style.display = 'none';
@@ -2082,7 +2109,15 @@ HTML_UI = """
                     status.innerText = '✅ Hồ sơ đã được cập nhật chính thức vào CSDL (Bảng cccd_results).';
                 } else {
                     const err = await res.json();
-                    showToast('❌ Lỗi cập nhật: ' + (err.detail || 'Thất bại'), false);
+                    let errMsg = 'Thất bại';
+                    if (typeof err.detail === 'string') {
+                        errMsg = err.detail;
+                    } else if (Array.isArray(err.detail)) {
+                        errMsg = err.detail.map(d => (d.msg ? `${d.loc ? d.loc.slice(-1)[0] + ': ' : ''}${d.msg}` : JSON.stringify(d))).join('; ');
+                    } else if (err.error) {
+                        errMsg = err.error;
+                    }
+                    showToast('❌ Lỗi cập nhật: ' + errMsg, false);
                 }
             } catch (e) {
                 showToast('❌ Lỗi kết nối server: ' + e.message, false);
@@ -2091,13 +2126,21 @@ HTML_UI = """
 
         function formatDateForApi(dStr) {
             if (!dStr) return null;
-            const parts = dStr.split(/[\/\-]/);
+            const clean = dStr.trim();
+            if (!clean || clean.toLowerCase().includes('không') || clean.toLowerCase().includes('vô')) return null;
+            const parts = clean.split(/[\/\-.]/);
             if (parts.length === 3) {
-                if (parts[0].length === 2 && parts[2].length === 4) {
-                    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                let day = parts[0].padStart(2, '0');
+                let month = parts[1].padStart(2, '0');
+                let year = parts[2];
+                if (parts[0].length === 4) {
+                    year = parts[0];
+                    month = parts[1].padStart(2, '0');
+                    day = parts[2].padStart(2, '0');
                 }
+                return `${year}-${month}-${day}`;
             }
-            return dStr;
+            return null;
         }
 
         // ========================================================

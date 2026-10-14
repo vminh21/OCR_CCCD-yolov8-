@@ -237,7 +237,13 @@ def edit_cccd_result_and_record_corrections(
                     ai_confidence=result.scan.confidence_score if result.scan else 0.95
                 )
                 db.add(correction)
-                setattr(result, field_name, new_val)
+                
+                # Chuyển đổi an toàn chuỗi ngày sang đối tượng date
+                parsed_val = new_val
+                if field_name in ("dob", "expiry_date") and isinstance(new_val, str):
+                    parsed_val = parse_date_safe(new_val)
+
+                setattr(result, field_name, parsed_val)
                 has_changed = True
 
     if has_changed:
