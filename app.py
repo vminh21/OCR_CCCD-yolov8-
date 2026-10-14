@@ -12,6 +12,7 @@ except ImportError:
 import os
 import sys
 import types
+import inspect
 from pathlib import Path
 
 # Cấu hình thư mục ghi tạm cho Ultralytics YOLO
@@ -70,8 +71,13 @@ with gr.Blocks(title="CCCD OCR AI Engine") as demo:
 orig_create_app = App.create_app
 
 @staticmethod
-def patched_create_app(blocks, app_kwargs=None, auth_dependency=None):
-    app = orig_create_app(blocks, app_kwargs, auth_dependency)
+def patched_create_app(*args, **kwargs):
+    try:
+        app = orig_create_app(*args, **kwargs)
+    except TypeError:
+        sig = inspect.signature(orig_create_app)
+        filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        app = orig_create_app(*args, **filtered)
     # Giao diện Facebook UI luôn được ưu tiên khớp đầu tiên tại trang chủ "/"
     app.routes.insert(0, Route("/", lambda req: HTMLResponse(HTML_UI), methods=["GET"]))
     # Gắn toàn bộ router và static media từ fastapi_app
