@@ -1,5 +1,4 @@
-# src/database/schemas.py
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import date, datetime
 from pydantic import BaseModel, Field
 
@@ -62,12 +61,12 @@ class ScanHistoryResponse(BaseModel):
 class CCCDResultEdit(BaseModel):
     id_number: Optional[str] = None
     full_name: Optional[str] = None
-    dob: Optional[date] = None
+    dob: Optional[Union[date, str]] = None
     gender: Optional[str] = None
     nationality: Optional[str] = None           # Trường 5: Quốc tịch
     origin_location: Optional[str] = None
     residence: Optional[str] = None
-    expiry_date: Optional[date] = None
+    expiry_date: Optional[Union[date, str]] = None
 
 class CCCDResultResponse(BaseModel):
     id: int
