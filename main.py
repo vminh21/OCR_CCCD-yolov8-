@@ -1525,8 +1525,12 @@ HTML_UI = """
             if (badgeDot) badgeDot.style.background = '#38bdf8';
 
             try {
+                if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                    throw new Error('Trình duyệt khóa Camera trên IP không bảo mật! Hãy đổi địa chỉ web thành http://localhost:8000 hoặc dùng link https://vminh21-ccccd-ocr.hf.space');
+                }
+
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error('Trình duyệt chưa hỗ trợ Camera hoặc trang web chưa chạy trên localhost / HTTPS!');
+                    throw new Error('Trình duyệt chặn Camera vì URL không bảo mật (Not Secure)! Vui lòng truy cập qua http://localhost:8000');
                 }
 
                 await startCameraStream();
