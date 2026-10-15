@@ -47,7 +47,14 @@ if (dist_path / "assets").exists():
 async def serve_index():
     # Ưu tiên frontend/dist/index.html nếu đã build production
     if (dist_path / "index.html").exists():
-        return FileResponse(dist_path / "index.html")
+        return FileResponse(
+            dist_path / "index.html",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     
     # Dự phòng template HTML
     template_path = ROOT_DIR / "frontend" / "templates" / "index.html"
