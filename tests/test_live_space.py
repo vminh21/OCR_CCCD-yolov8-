@@ -7,13 +7,11 @@ BASE_URL = "https://vminh21-ccccd-ocr.hf.space"
 print(f"=== TESTING LIVE SPACE: {BASE_URL} ===\n")
 
 # 1. Test Root UI
-print("[1/7] Testing Root GET / (Facebook UI)...")
+print("[1/7] Testing Root GET / (React SPA)...")
 r_root = requests.get(BASE_URL)
 assert r_root.status_code == 200, f"Root returned {r_root.status_code}"
-assert "CCCD AI • Hệ Thống Nhận Diện" in r_root.text, "Page title mismatch"
-assert "dropzone" in r_root.text, "Dropzone not found"
-assert "auth-screen" in r_root.text, "Auth screen not found"
-print(f"   => PASS! HTML size: {len(r_root.text):,} bytes. 100% Facebook UI confirmed!\n")
+assert "<div id=\"root\"></div>" in r_root.text or "CCCD" in r_root.text, "Root React element mismatch"
+print(f"   => PASS! HTML size: {len(r_root.text):,} bytes. React SPA confirmed!\n")
 
 # 2. Test Registration & Login
 ts = int(time.time())
