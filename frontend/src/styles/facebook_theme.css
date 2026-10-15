@@ -674,6 +674,47 @@
             gap: 24px;
         }
 
+        .demographics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 860px) {
+            .demographics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 9px;
+            background: #e4e6eb;
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.4s ease;
+        }
+
+        .demographic-item {
+            margin-bottom: 12px;
+        }
+        .demographic-item:last-child {
+            margin-bottom: 0;
+        }
+        .demographic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 0.84rem;
+        }
+
         .modal-actions {
             display: flex;
             gap: 10px;

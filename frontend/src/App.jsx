@@ -9,6 +9,7 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 import ScanTab from './tabs/ScanTab';
 import ResultsTab from './tabs/ResultsTab';
 import StatisticsTab from './tabs/StatisticsTab';
+import AIAccuracyTab from './tabs/AIAccuracyTab';
 import ProfileTab from './tabs/ProfileTab';
 
 import { getToken, removeToken, apiGetMe } from './services/api';
@@ -17,6 +18,7 @@ const TAB_MAP = {
   'tab-scan': '#scan',
   'tab-results': '#results',
   'tab-stats': '#stats',
+  'tab-ai-accuracy': '#ai-accuracy',
   'tab-profile': '#profile',
 };
 
@@ -24,6 +26,7 @@ const HASH_MAP = {
   '#scan': 'tab-scan',
   '#results': 'tab-results',
   '#stats': 'tab-stats',
+  '#ai-accuracy': 'tab-ai-accuracy',
   '#profile': 'tab-profile',
 };
 
@@ -215,7 +218,17 @@ export default function App() {
             <line x1="12" y1="20" x2="12" y2="4" />
             <line x1="6" y1="20" x2="6" y2="14" />
           </svg>
-          3. Thống Kê & Độ Đúng Của AI
+          3. Thống Kê & Nhân Khẩu Học
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === 'tab-ai-accuracy' ? 'active' : ''}`}
+          onClick={() => navigateToTab('tab-ai-accuracy')}
+        >
+          <svg className="svg-icon" viewBox="0 0 24 24">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          4. Đánh Giá Độ Đúng Của AI
         </button>
         <button
           type="button"
@@ -226,7 +239,7 @@ export default function App() {
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          4. Quản Lý Tài Khoản
+          5. Quản Lý Tài Khoản
         </button>
       </div>
 
@@ -256,6 +269,12 @@ export default function App() {
       {activeTab === 'tab-stats' && (
         <div id="tab-stats" className="tab-panel active">
           <StatisticsTab showToast={showToast} />
+        </div>
+      )}
+
+      {activeTab === 'tab-ai-accuracy' && (
+        <div id="tab-ai-accuracy" className="tab-panel active">
+          <AIAccuracyTab showToast={showToast} />
         </div>
       )}
 

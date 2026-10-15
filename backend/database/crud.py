@@ -272,3 +272,183 @@ def edit_cccd_result_and_record_corrections(
 
 def get_all_user_corrections(db: Session, user_id: int) -> List[AICorrection]:
     return db.query(AICorrection).filter(AICorrection.user_id == user_id).order_by(desc(AICorrection.corrected_at)).all()
+
+
+# ==============================================================================
+# BẢNG 6: PHÂN TÍCH NHÂN KHẨU HỌC & CHẤT LƯỢNG MÔ HÌNH AI
+# ==============================================================================
+
+PROVINCES_VN = [
+    "Hà Nội", "TP. Hồ Chí Minh", "Hải Phòng", "Đà Nẵng", "Cần Thơ", "An Giang",
+    "Bà Rịa - Vũng Tàu", "Bắc Giang", "Bắc Kạn", "Bạc Liêu", "Bắc Ninh", "Bến Tre",
+    "Bình Định", "Bình Dương", "Bình Phước", "Bình Thuận", "Cà Mau", "Cao Bằng",
+    "Đắk Lắk", "Đắk Nông", "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai",
+    "Hà Giang", "Hà Nam", "Hà Tĩnh", "Hải Dương", "Hậu Giang", "Hòa Bình",
+    "Hưng Yên", "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu", "Lâm Đồng",
+    "Lạng Sơn", "Lào Cai", "Long An", "Nam Định", "Nghệ An", "Ninh Bình",
+    "Ninh Thuận", "Phú Thọ", "Phú Yên", "Quảng Bình", "Quảng Nam", "Quảng Ngãi",
+    "Quảng Ninh", "Quảng Trị", "Sóc Trăng", "Sơn La", "Tây Ninh", "Thái Bình",
+    "Thái Nguyên", "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "Trà Vinh",
+    "Tuyên Quang", "Vĩnh Long", "Vĩnh Phúc", "Yên Bái"
+]
+
+PROVINCE_ALIASES = {
+    "Hà Nội": ["Hà Nội", "Ha Noi", "HN"],
+    "TP. Hồ Chí Minh": ["Hồ Chí Minh", "Ho Chi Minh", "HCM", "TP.HCM", "TPHCM", "Sài Gòn", "Sai Gon"],
+    "Đà Nẵng": ["Đà Nẵng", "Da Nang"],
+    "Hải Phòng": ["Hải Phòng", "Hai Phong"],
+    "Cần Thơ": ["Cần Thơ", "Can Tho"],
+    "Bà Rịa - Vũng Tàu": ["Vũng Tàu", "Vung Tau", "Bà Rịa", "Ba Ria"],
+    "Thừa Thiên Huế": ["Thừa Thiên Huế", "Thua Thien Hue", "Huế", "Hue"],
+}
+
+FIELD_MAP = [
+    ("id_number", "1. Số CCCD (12 số)"),
+    ("full_name", "2. Họ và tên"),
+    ("dob", "3. Ngày sinh"),
+    ("gender", "4. Giới tính"),
+    ("nationality", "5. Quốc tịch"),
+    ("origin_location", "6. Quê quán"),
+    ("residence", "7. Nơi thường trú"),
+    ("expiry_date", "8. Có giá trị đến"),
+]
+
+
+def extract_province(address_str: str) -> str:
+    if not address_str:
+        return "Khác"
+    addr_lower = address_str.strip().lower()
+
+    # Ưu tiên kiểm tra các alias phổ biến
+    for prov, aliases in PROVINCE_ALIASES.items():
+        for alias in aliases:
+            if alias.lower() in addr_lower:
+                return prov
+
+    # Kiểm tra danh sách tỉnh thành chuẩn
+    for prov in PROVINCES_VN:
+        if prov.lower() in addr_lower:
+            return prov
+
+    return "Khác"
+
+
+def get_user_demographics(db: Session, user_id: int) -> Dict[str, Any]:
+    results = db.query(CCCDResult).filter(CCCDResult.user_id == user_id).all()
+    total_records = len(results)
+
+    # 1. Thống kê giới tính
+    gender_counts = {"Nam": 0, "Nữ": 0, "Khác": 0}
+    for r in results:
+        g = str(r.gender or "").strip().lower()
+        if "nam" in g:
+            gender_counts["Nam"] += 1
+        elif "nữ" in g or "nu" in g:
+            gender_counts["Nữ"] += 1
+        else:
+            gender_counts["Khác"] += 1
+
+    gender_stats = []
+    for g_name, g_count in gender_counts.items():
+        pct = round((g_count / total_records * 100.0), 1) if total_records > 0 else 0.0
+        gender_stats.append({"name": g_name, "count": g_count, "percent": pct})
+
+    # 2. Thống kê phân bố tỉnh thành
+    province_counter: Dict[str, int] = {}
+    for r in results:
+        prov = extract_province(r.residence or r.origin_location or "")
+        province_counter[prov] = province_counter.get(prov, 0) + 1
+
+    # Sắp xếp tỉnh thành theo số lượng giảm dần
+    sorted_provs = sorted(province_counter.items(), key=lambda x: x[1], reverse=True)
+    province_stats = []
+    for prov_name, p_count in sorted_provs:
+        pct = round((p_count / total_records * 100.0), 1) if total_records > 0 else 0.0
+        province_stats.append({"province": prov_name, "count": p_count, "percent": pct})
+
+    # 3. Thống kê phân bố năm sinh & nhóm độ tuổi
+    current_year = datetime.now().year
+    age_groups = {
+        "Dưới 18 tuổi": 0,
+        "18 - 30 tuổi": 0,
+        "31 - 45 tuổi": 0,
+        "46 - 60 tuổi": 0,
+        "Trên 60 tuổi": 0,
+        "Chưa xác định": 0
+    }
+
+    for r in results:
+        birth_year = None
+        if r.dob:
+            if isinstance(r.dob, (datetime, date)):
+                birth_year = r.dob.year
+            elif isinstance(r.dob, str):
+                parts = r.dob.replace("/", "-").split("-")
+                for part in parts:
+                    if len(part) == 4 and part.isdigit():
+                        birth_year = int(part)
+                        break
+
+        if birth_year and 1900 <= birth_year <= current_year:
+            age = current_year - birth_year
+            if age < 18:
+                age_groups["Dưới 18 tuổi"] += 1
+            elif 18 <= age <= 30:
+                age_groups["18 - 30 tuổi"] += 1
+            elif 31 <= age <= 45:
+                age_groups["31 - 45 tuổi"] += 1
+            elif 46 <= age <= 60:
+                age_groups["46 - 60 tuổi"] += 1
+            else:
+                age_groups["Trên 60 tuổi"] += 1
+        else:
+            age_groups["Chưa xác định"] += 1
+
+    age_group_stats = []
+    for label, count in age_groups.items():
+        pct = round((count / total_records * 100.0), 1) if total_records > 0 else 0.0
+        age_group_stats.append({"label": label, "count": count, "percent": pct})
+
+    return {
+        "total_records": total_records,
+        "gender_stats": gender_stats,
+        "province_stats": province_stats,
+        "age_group_stats": age_group_stats
+    }
+
+
+def get_user_ai_quality(db: Session, user_id: int) -> Dict[str, Any]:
+    stat = get_user_statistics(db, user_id)
+    total_scans = stat.total_scans
+    edited_scans = stat.edited_scans
+    perfect_scans = max(0, total_scans - edited_scans)
+    perfect_rate = round((perfect_scans / total_scans * 100.0), 1) if total_scans > 0 else 100.0
+
+    # Đếm số lỗi theo từng trường
+    corrections = db.query(AICorrection).filter(AICorrection.user_id == user_id).all()
+    error_counter: Dict[str, int] = {}
+    for c in corrections:
+        fn = c.field_name
+        error_counter[fn] = error_counter.get(fn, 0) + 1
+
+    field_accuracy = []
+    for fn, label in FIELD_MAP:
+        err_cnt = error_counter.get(fn, 0)
+        acc_pct = max(0.0, round(100.0 - (err_cnt / total_scans * 100.0), 1)) if total_scans > 0 else 100.0
+        field_accuracy.append({
+            "field_name": fn,
+            "field_label": label,
+            "error_count": err_cnt,
+            "accuracy_percent": acc_pct
+        })
+
+    return {
+        "total_scans": total_scans,
+        "edited_scans": edited_scans,
+        "perfect_scans": perfect_scans,
+        "perfect_rate": perfect_rate,
+        "avg_confidence": stat.avg_confidence,
+        "avg_processing_time": stat.avg_processing_time,
+        "field_accuracy": field_accuracy
+    }
+

@@ -119,3 +119,44 @@ class AICorrectionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ==============================================================================
+# 6. DEMOGRAPHICS & AI QUALITY SCHEMAS (PHÂN TÍCH NHÂN KHẨU HỌC & CHẤT LƯỢNG AI)
+# ==============================================================================
+
+class GenderStatItem(BaseModel):
+    name: str
+    count: int
+    percent: float
+
+class ProvinceStatItem(BaseModel):
+    province: str
+    count: int
+    percent: float
+
+class AgeGroupStatItem(BaseModel):
+    label: str
+    count: int
+    percent: float
+
+class DemographicsResponse(BaseModel):
+    total_records: int
+    gender_stats: List[GenderStatItem]
+    province_stats: List[ProvinceStatItem]
+    age_group_stats: List[AgeGroupStatItem]
+
+class FieldAccuracyItem(BaseModel):
+    field_name: str
+    field_label: str
+    error_count: int
+    accuracy_percent: float
+
+class AIQualityResponse(BaseModel):
+    total_scans: int
+    edited_scans: int
+    perfect_scans: int
+    perfect_rate: float
+    avg_confidence: float
+    avg_processing_time: float
+    field_accuracy: List[FieldAccuracyItem]
+

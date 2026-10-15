@@ -120,6 +120,16 @@ export async function apiGetStatistics() {
   return res;
 }
 
+export async function apiGetDemographics() {
+  const res = await apiRequest('/api/statistics/demographics', { method: 'GET' });
+  return res;
+}
+
+export async function apiGetAIQuality() {
+  const res = await apiRequest('/api/statistics/ai-quality', { method: 'GET' });
+  return res;
+}
+
 export async function apiGetCorrections() {
   const res = await apiRequest('/api/corrections', { method: 'GET' });
   return res;
