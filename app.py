@@ -77,36 +77,48 @@ with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     btn = gr.Button("Trích xuất thông tin")
     btn.click(fn=predict_gpu, inputs=[inp], outputs=[out])
 
-# 2. Tinh chỉnh demo.app để chèn giao diện Facebook UI và static assets trước các route nội tại của Gradio
-app = demo.app
+from gradio.routes import App
 
-# Route "/" phục vụ Facebook UI với headers no-cache (hỗ trợ cả GET và HEAD cho Gradio healthcheck)
-async def serve_facebook_home(request):
-    if dist_index.exists():
-        return FileResponse(
-            dist_index,
-            headers={
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0"
-            }
-        )
-    return HTMLResponse(get_index_content())
+# 2. Hook App.create_app để đảm bảo demo.launch() giữ nguyên Facebook UI, assets và các endpoint API của FastAPI
+orig_create_app = App.create_app
 
-app.routes.insert(0, Route("/", serve_facebook_home, methods=["GET", "HEAD"]))
+def custom_create_app(*args, **kwargs):
+    server_app = orig_create_app(*args, **kwargs)
+    
+    # Route "/" phục vụ Facebook UI với headers no-cache (hỗ trợ cả GET và HEAD cho Gradio healthcheck)
+    async def serve_facebook_home(request):
+        if dist_index.exists():
+            return FileResponse(
+                dist_index,
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+            )
+        return HTMLResponse(get_index_content())
 
-# Chèn Mount "/assets" và "/media" TRƯỚC route nội tại "/assets/{path:path}" của Gradio
-if (dist_path / "assets").exists():
-    app.routes.insert(1, Mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="react_assets"))
+    # 1. Chèn "/" phục vụ Facebook UI ở vị trí đầu tiên
+    server_app.routes.insert(0, Route("/", serve_facebook_home, methods=["GET", "HEAD"]))
 
-Path("data/output").mkdir(parents=True, exist_ok=True)
-app.routes.insert(2, Mount("/media", StaticFiles(directory="data/output"), name="media_output"))
+    # 2. Chèn Mount "/assets" TRƯỚC route nội tại "/assets/{path:path}" của Gradio
+    if (dist_path / "assets").exists():
+        server_app.routes.insert(1, Mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="react_assets"))
 
-# Gắn toàn bộ router còn lại từ fastapi_app (/api, /predict, etc.)
-app.mount("/", fastapi_app)
+    # 3. Chèn Mount "/media"
+    Path("data/output").mkdir(parents=True, exist_ok=True)
+    server_app.routes.insert(2, Mount("/media", StaticFiles(directory="data/output"), name="media_output"))
+
+    # 4. Gắn toàn bộ router backend (/api, /predict, etc.) từ fastapi_app
+    server_app.mount("/", fastapi_app)
+
+    return server_app
+
+App.create_app = custom_create_app
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR Facebook UI Server launching on 0.0.0.0:{port}...")
     demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False, show_api=False)
+
 
