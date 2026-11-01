@@ -54,115 +54,165 @@ async def camera_probe_api(file: UploadFile = File(...)):
         from backend.core.validator import clean_id_number
 
         card_model = _load_model()
-        results = card_model.predict(img, conf=0.18, verbose=False, imgsz=640)
+        results = card_model.predict(img, conf=0.35, verbose=False, imgsz=640)
 
-        best_box = None
-        best_conf = 0.0
-        best_cls = -1
+        best_front_box = None
+        best_front_conf = 0.0
+        best_back_box = None
+        best_back_conf = 0.0
 
         for r in results:
             for b in r.boxes:
                 c = float(b.conf[0])
-                if c > best_conf:
-                    best_conf = c
-                    best_box = b
-                    best_cls = int(b.cls[0])
+                cls_id = int(b.cls[0])
+                if cls_id == 1 and c > best_front_conf:
+                    best_front_conf = c
+                    best_front_box = b
+                elif cls_id == 0 and c > best_back_conf:
+                    best_back_conf = c
+                    best_back_box = b
 
-        if best_box is not None and best_conf >= 0.18:
-            xyxy = best_box.xyxy[0].cpu().numpy().astype(int)
+        # Trường hợp 1: Phát hiện MẶT SAU CCCD (Class 0: back-cccd)
+        if best_back_box is not None and (best_front_box is None or best_back_conf >= best_front_conf - 0.05):
+            xyxy_back = best_back_box.xyxy[0].cpu().numpy().astype(int)
+            x1, y1, x2, y2 = max(0, xyxy_back[0]), max(0, xyxy_back[1]), min(w, xyxy_back[2]), min(h, xyxy_back[3])
+            norm_box = [round(float(x1) / w, 3), round(float(y1) / h, 3), round(float(x2) / w, 3), round(float(y2) / h, 3)]
+            return {
+                "detected": False,
+                "is_cccd": True,
+                "side": "back",
+                "box": norm_box,
+                "score": round(best_back_conf, 2),
+                "message": "⚠️ Đây là mặt sau của CCCD! Vui lòng lật lại mặt trước",
+                "color": "yellow",
+                "can_capture": False,
+                "auto_capture": False
+            }
+
+        # Trường hợp 2: Có box mặt trước từ mô hình Stage 1
+        if best_front_box is not None and best_front_conf >= 0.35:
+            xyxy = best_front_box.xyxy[0].cpu().numpy().astype(int)
             x1, y1, x2, y2 = max(0, xyxy[0]), max(0, xyxy[1]), min(w, xyxy[2]), min(h, xyxy[3])
             norm_box = [round(float(x1) / w, 3), round(float(y1) / h, 3), round(float(x2) / w, 3), round(float(y2) / h, 3)]
             bw = x2 - x1
             bh = y2 - y1
             area_ratio = (bw * bh) / (w * h)
 
-            # Trường hợp 1: Phát hiện MẶT SAU CCCD (Class 0: back-cccd)
-            if best_cls == 0:
-                return {
-                    "detected": False,
-                    "side": "back",
-                    "box": norm_box,
-                    "score": round(best_conf, 2),
-                    "message": "⚠️ Đây là MẶT SAU CCCD! Vui lòng lật lại mặt trước",
-                    "color": "yellow"
-                }
-
             # Kiểm tra cự ly thẻ
             if area_ratio < 0.08:
                 return {
                     "detected": False,
+                    "is_cccd": True,
                     "side": "front_far",
                     "box": norm_box,
-                    "score": round(best_conf, 2),
+                    "score": round(best_front_conf, 2),
                     "message": "📏 Đưa thẻ CCCD lại gần camera hơn",
-                    "color": "yellow"
+                    "color": "yellow",
+                    "can_capture": False,
+                    "auto_capture": False
                 }
 
-            # Trường hợp 2: Kiểm tra tỷ lệ khung thẻ (Aspect Ratio của CCCD ~ 1.58)
+            # Kiểm tra tỷ lệ khung thẻ (Aspect Ratio của CCCD ~ 1.58)
             ar = bw / max(1.0, bh)
             if ar < 1.15 or ar > 2.3:
                 return {
                     "detected": False,
+                    "is_cccd": False,
                     "side": "invalid_card",
                     "box": norm_box,
-                    "score": round(best_conf, 2),
-                    "message": "❌ Không phải thẻ CCCD! (Sai tỷ lệ khung thẻ)",
-                    "color": "red"
+                    "score": round(best_front_conf, 2),
+                    "message": "❌ Không phải thẻ CCCD! Không thể chụp thẻ khác",
+                    "color": "red",
+                    "can_capture": False,
+                    "auto_capture": False
                 }
 
-            # Bóc tách và kiểm tra thẻ
+            # Bóc tách và kiểm tra thẻ CCCD bằng Stage 2 YOLO
             card_crop = img[y1:y2, x1:x2]
             if card_crop.size > 0:
                 try:
-                    f_boxes, _ = extract_fields_yolo(card_crop, field_model)
-                    num_fields = len(f_boxes)
+                    field_crops = extract_fields_yolo(card_crop)
+                    num_fields = len(field_crops)
+                    has_id = 'so_cccd' in field_crops
+                    has_name = 'ho_ten' in field_crops
 
-                    if num_fields >= 2:
-                        id_res = read_field(card_crop, f_boxes, 'id')
-                        raw_id = id_res.get('text', '') if isinstance(id_res, dict) else str(id_res)
-                        clean_id = clean_id_number(raw_id)
+                    # Thẻ CCCD chuẩn thật sự luôn có ít nhất 4 trường và phải có cả trường số CCCD lẫn họ tên
+                    if num_fields >= 4 and has_id and has_name:
+                        id_crops = field_crops.get('so_cccd', [])
+                        clean_id = ""
+                        if id_crops:
+                            try:
+                                id_res = read_field('so_cccd', id_crops)
+                                raw_id = id_res.get('text', '') if isinstance(id_res, dict) else str(id_res)
+                                clean_id = clean_id_number(raw_id)
+                            except Exception:
+                                pass
 
                         if len(clean_id) == 12:
                             return {
                                 "detected": True,
+                                "is_cccd": True,
                                 "side": "front",
                                 "box": norm_box,
-                                "score": round(best_conf, 2),
+                                "score": round(best_front_conf, 2),
                                 "message": "✅ CCCD gắn chip hợp lệ! Giữ yên để chụp...",
                                 "color": "green",
+                                "can_capture": True,
                                 "auto_capture": True
+                            }
+                        elif len(clean_id) > 0 and len(clean_id) != 12:
+                            # Đọc được chuỗi số nhưng không phải 12 số CCCD -> Thẻ khác (thẻ SV, ATM, bằng lái)
+                            return {
+                                "detected": False,
+                                "is_cccd": False,
+                                "side": "invalid_card",
+                                "box": norm_box,
+                                "score": round(best_front_conf, 2),
+                                "message": "❌ Không phải thẻ CCCD! Không thể chụp thẻ khác",
+                                "color": "red",
+                                "can_capture": False,
+                                "auto_capture": False
                             }
 
                         return {
                             "detected": True,
+                            "is_cccd": True,
                             "side": "front",
                             "box": norm_box,
-                            "score": round(best_conf, 2),
-                            "message": "✅ Đã tìm thấy mặt trước CCCD! Giữ yên...",
+                            "score": round(best_front_conf, 2),
+                            "message": "✅ Đã tìm thấy mặt trước CCCD! Giữ yên để chụp...",
                             "color": "green",
-                            "auto_capture": (best_conf >= 0.70)
+                            "can_capture": True,
+                            "auto_capture": (best_front_conf >= 0.80)
                         }
                     else:
+                        # Thẻ khác (thẻ sinh viên, thẻ ngân hàng, thẻ xe...) không đủ cấu trúc trường CCCD
                         return {
                             "detected": False,
+                            "is_cccd": False,
                             "side": "invalid_card",
                             "box": norm_box,
-                            "score": round(best_conf, 2),
-                            "message": "❌ Không phải thẻ CCCD! (Không tìm thấy các trường thông tin)",
-                            "color": "red"
+                            "score": round(best_front_conf, 2),
+                            "message": "❌ Không phải thẻ CCCD! Không thể chụp thẻ khác",
+                            "color": "red",
+                            "can_capture": False,
+                            "auto_capture": False
                         }
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Lỗi extract_fields_yolo trong probe: {e}")
                     return {
-                        "detected": True,
-                        "side": "front",
+                        "detected": False,
+                        "is_cccd": False,
+                        "side": "invalid_card",
                         "box": norm_box,
-                        "score": round(best_conf, 2),
-                        "message": "✅ Đã thấy thẻ CCCD! Giữ yên...",
-                        "color": "green",
-                        "auto_capture": (best_conf >= 0.70)
+                        "score": round(best_front_conf, 2),
+                        "message": "❌ Không phải thẻ CCCD! Không thể chụp thẻ khác",
+                        "color": "red",
+                        "can_capture": False,
+                        "auto_capture": False
                     }
 
-        # Kiểm tra hình dạng giả mạo không phải CCCD
+        # Trường hợp 3: Kiểm tra hình dạng thẻ khác qua Edge / Contour nếu YOLO không nhận
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         edges = cv2.Canny(blurred, 40, 140)
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -190,11 +240,14 @@ async def camera_probe_api(file: UploadFile = File(...)):
             box_candidate = [round(float(cx) / w, 3), round(float(cy) / h, 3), round(float(cx + cw_c) / w, 3), round(float(cy + ch_c) / h, 3)]
             return {
                 "detected": False,
+                "is_cccd": False,
                 "side": "invalid_card",
                 "box": box_candidate,
                 "score": 0.0,
-                "message": "❌ Không phải thẻ CCCD! (Phát hiện thẻ sinh viên / thẻ khác)",
-                "color": "red"
+                "message": "❌ Không phải thẻ CCCD! Không thể chụp thẻ khác",
+                "color": "red",
+                "can_capture": False,
+                "auto_capture": False
             }
 
     except Exception as e:
@@ -202,11 +255,14 @@ async def camera_probe_api(file: UploadFile = File(...)):
 
     return {
         "detected": False,
+        "is_cccd": False,
         "side": "none",
         "box": None,
         "score": 0.0,
-        "message": "🔍 Đặt mặt trước thẻ CCCD vào khung",
-        "color": "white"
+        "message": "🔍 Căn mặt trước thẻ CCCD vào khung",
+        "color": "white",
+        "can_capture": False,
+        "auto_capture": False
     }
 
 

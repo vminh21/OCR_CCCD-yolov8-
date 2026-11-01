@@ -302,14 +302,18 @@ def detect_and_crop_card(image):
 
 
     # 1. Kiểm tra nếu là mặt sau của CCCD
-    if best_back_score >= 0.35 and (best_front_box is None or best_back_score > best_front_score + 0.10):
+    back_conf = float(best_back_box.conf[0]) if best_back_box is not None else 0.0
+    front_conf = float(best_front_box.conf[0]) if best_front_box is not None else 0.0
+
+    if best_back_box is not None and (best_front_box is None or back_conf >= front_conf - 0.05) and (best_back_score >= 0.08 or back_conf >= 0.25):
         raise ValueError("Đây là mặt sau của CCCD. Chúng tôi chỉ trích xuất kết quả của mặt trước!")
 
     # 2. Kiểm tra nếu không tìm thấy thẻ mặt trước hợp lệ
-    if best_front_box is None or best_front_score < 0.20:
-        if best_back_score >= 0.20:
+    if best_front_box is None or best_front_score < 0.30:
+        if best_back_box is not None and back_conf >= 0.20:
             raise ValueError("Đây là mặt sau của CCCD. Chúng tôi chỉ trích xuất kết quả của mặt trước!")
         raise ValueError("Sai định dạng CCCD! Hệ thống chỉ hỗ trợ thẻ Căn cước công dân gắn chip chuẩn mới nhất.")
+
 
     best_crop_box = best_front_box
     best_oriented_img = best_front_img

@@ -13,9 +13,14 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
   const [badgeText, setBadgeText] = useState('Đang khởi động Camera...');
   const [badgeColor, setBadgeColor] = useState('#38bdf8');
   const [isCapturing, setIsCapturing] = useState(false);
+  const [canCapture, setCanCapture] = useState(false);
+  const [cardSide, setCardSide] = useState('none');
+  const [frameText, setFrameText] = useState('CĂN MẶT TRƯỚC CCCD VÀO ĐÂY');
 
   const probeTimerRef = useRef(null);
   const isCapturingRef = useRef(false);
+  const canCaptureRef = useRef(false);
+  const cardSideRef = useRef('none');
   const consecutiveHitsRef = useRef(0);
   const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
@@ -54,11 +59,20 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
       } catch (e) {}
     }
     setStream(null);
+    canCaptureRef.current = false;
+    setCanCapture(false);
+    setCardSide('none');
+    cardSideRef.current = 'none';
   };
 
   const startCamera = async () => {
     setBadgeText('Đang khởi động Camera...');
     setBadgeColor('#38bdf8');
+    setCardSide('none');
+    cardSideRef.current = 'none';
+    setCanCapture(false);
+    canCaptureRef.current = false;
+    setFrameText('CĂN MẶT TRƯỚC CCCD VÀO ĐÂY');
     isCapturingRef.current = false;
     consecutiveHitsRef.current = 0;
 
@@ -125,6 +139,8 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
       showToast(friendlyMsg, false);
       setBadgeText(isInIframe ? 'Bị chặn bởi khung Hugging Face' : 'Lỗi Camera');
       setBadgeColor('#ef4444');
+      setCardSide('invalid_card');
+      cardSideRef.current = 'invalid_card';
     }
   };
 
@@ -158,27 +174,71 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
     if (isCapturingRef.current) return;
 
     setBadgeText(data.message || 'Căn thẻ vào khung...');
-    if (data.color === 'green') {
-      setBadgeColor('#22c55e');
-    } else if (data.color === 'yellow') {
-      setBadgeColor('#f59e0b');
-    } else {
-      setBadgeColor('#ef4444');
-    }
 
-    // Auto capture logic
-    if (data.detected && data.auto_capture) {
-      consecutiveHitsRef.current += 1;
-      if (consecutiveHitsRef.current >= 3) {
-        captureCurrentFrame();
+    const side = data.side || (data.detected ? 'front' : 'none');
+    setCardSide(side);
+    cardSideRef.current = side;
+
+    if (side === 'invalid_card' || data.color === 'red') {
+      // 1. Thẻ khác (Thẻ sinh viên, thẻ ngân hàng...) -> BÁO ĐỎ & KHÓA CHỤP
+      setBadgeColor('#ef4444');
+      setFrameText('❌ KHÔNG PHẢI THẺ CCCD! KHÔNG THỂ CHỤP');
+      setCanCapture(false);
+      canCaptureRef.current = false;
+      consecutiveHitsRef.current = 0;
+    } else if (side === 'back') {
+      // 2. Mặt sau CCCD -> Báo vàng & Hiển thị rõ: "Đây là mặt sau của CCCD"
+      setBadgeColor('#f59e0b');
+      setFrameText('⚠️ ĐÂY LÀ MẶT SAU CỦA CCCD');
+      setCanCapture(false);
+      canCaptureRef.current = false;
+      consecutiveHitsRef.current = 0;
+    } else if (side === 'front') {
+      // 3. Mặt trước CCCD -> Báo xanh & Cho phép chụp
+      setBadgeColor('#22c55e');
+      setFrameText('✅ MẶT TRƯỚC CCCD HỢP LỆ');
+      setCanCapture(true);
+      canCaptureRef.current = true;
+
+      // Auto capture logic khi giữ ổn định
+      if (data.detected && data.auto_capture) {
+        consecutiveHitsRef.current += 1;
+        if (consecutiveHitsRef.current >= 3) {
+          captureCurrentFrame();
+        }
+      } else {
+        consecutiveHitsRef.current = 0;
       }
+    } else if (side === 'front_far') {
+      setBadgeColor('#f59e0b');
+      setFrameText('📏 ĐƯA THẺ LẠI GẦN CAMERA HƠN');
+      setCanCapture(false);
+      canCaptureRef.current = false;
+      consecutiveHitsRef.current = 0;
     } else {
+      // Trạng thái chờ / chưa thấy thẻ
+      setBadgeColor('#38bdf8');
+      setFrameText('CĂN MẶT TRƯỚC CCCD VÀO ĐÂY');
+      setCanCapture(false);
+      canCaptureRef.current = false;
       consecutiveHitsRef.current = 0;
     }
   };
 
   const captureCurrentFrame = () => {
     if (isCapturingRef.current || !videoRef.current || !canvasRef.current) return;
+
+    if (!canCaptureRef.current) {
+      if (cardSideRef.current === 'invalid_card') {
+        showToast('❌ Thẻ không hợp lệ! Vui lòng chỉ dùng thẻ CCCD gắn chip.', false);
+      } else if (cardSideRef.current === 'back') {
+        showToast('⚠️ Đây là mặt sau của CCCD! Vui lòng lật lại mặt trước để trích xuất.', false);
+      } else {
+        showToast('🔍 Vui lòng căn chỉnh mặt trước thẻ CCCD rõ nét vào khung trước khi chụp!', false);
+      }
+      return;
+    }
+
     isCapturingRef.current = true;
     setIsCapturing(true);
 
@@ -198,6 +258,7 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
       isCapturingRef.current = false;
     }, 'image/jpeg', 0.95);
   };
+
 
   const handleSwitchCamera = () => {
     if (videoDevices.length < 2) return;
@@ -274,19 +335,84 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
           <canvas ref={canvasRef} style={{ display: 'none' }} />
           <canvas ref={overlayCanvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 8 }} />
 
-          {/* LỚP PHỦ CĂN THẺ TỶ LỆ CHUẨN 1.586 */}
-          <div style={{ position: 'absolute', width: '75%', maxWidth: '480px', aspectRatio: '1.586', border: '2px dashed rgba(255, 255, 255, 0.7)', borderRadius: '6px', boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.52)', pointerEvents: 'none', transition: 'all 0.25s ease' }}>
-            <div style={{ position: 'absolute', top: '-3px', left: '-3px', width: '24px', height: '24px', borderTop: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8', borderTopLeftRadius: '6px' }} />
-            <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '24px', height: '24px', borderTop: '3px solid #38bdf8', borderRight: '3px solid #38bdf8', borderTopRightRadius: '6px' }} />
-            <div style={{ position: 'absolute', bottom: '-3px', left: '-3px', width: '24px', height: '24px', borderBottom: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8', borderBottomLeftRadius: '6px' }} />
-            <div style={{ position: 'absolute', bottom: '-3px', right: '-3px', width: '24px', height: '24px', borderBottom: '3px solid #38bdf8', borderRight: '3px solid #38bdf8', borderBottomRightRadius: '6px' }} />
+          {/* LỚP PHỦ CĂN THẺ TỶ LỆ CHUẨN 1.586 (ĐỔI MÀU ĐỘNG THEO TRẠNG THÁI AI) */}
+          <div
+            style={{
+              position: 'absolute',
+              width: '75%',
+              maxWidth: '480px',
+              aspectRatio: '1.586',
+              border: cardSide === 'invalid_card'
+                ? '3px solid #ef4444'
+                : (cardSide === 'front'
+                  ? '3px solid #22c55e'
+                  : (cardSide === 'back'
+                    ? '3px dashed #f59e0b'
+                    : '2px dashed rgba(255, 255, 255, 0.7)')),
+              borderRadius: '8px',
+              boxShadow: cardSide === 'invalid_card'
+                ? '0 0 28px rgba(239, 68, 68, 0.85), 0 0 0 9999px rgba(0, 0, 0, 0.58)'
+                : (cardSide === 'front'
+                  ? '0 0 24px rgba(34, 197, 94, 0.75), 0 0 0 9999px rgba(0, 0, 0, 0.52)'
+                  : (cardSide === 'back'
+                    ? '0 0 20px rgba(245, 158, 11, 0.65), 0 0 0 9999px rgba(0, 0, 0, 0.52)'
+                    : '0 0 0 9999px rgba(0, 0, 0, 0.52)')),
+              pointerEvents: 'none',
+              transition: 'all 0.25s ease',
+            }}
+          >
+            {/* 4 GÓC MARKER ĐỔI MÀU */}
+            <div style={{ position: 'absolute', top: '-3px', left: '-3px', width: '24px', height: '24px', borderTop: `4px solid ${badgeColor}`, borderLeft: `4px solid ${badgeColor}`, borderTopLeftRadius: '8px' }} />
+            <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '24px', height: '24px', borderTop: `4px solid ${badgeColor}`, borderRight: `4px solid ${badgeColor}`, borderTopRightRadius: '8px' }} />
+            <div style={{ position: 'absolute', bottom: '-3px', left: '-3px', width: '24px', height: '24px', borderBottom: `4px solid ${badgeColor}`, borderLeft: `4px solid ${badgeColor}`, borderBottomLeftRadius: '8px' }} />
+            <div style={{ position: 'absolute', bottom: '-3px', right: '-3px', width: '24px', height: '24px', borderBottom: `4px solid ${badgeColor}`, borderRight: `4px solid ${badgeColor}`, borderBottomRightRadius: '8px' }} />
 
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.9)', pointerEvents: 'none' }}>
-              <span>CĂN MẶT TRƯỚC CCCD VÀO ĐÂY</span>
+            {/* CHỮ THÔNG BÁO TÂM KHUNG */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: cardSide === 'invalid_card'
+                ? '#fca5a5'
+                : (cardSide === 'front'
+                  ? '#86efac'
+                  : (cardSide === 'back'
+                    ? '#fde047'
+                    : 'rgba(255,255,255,0.85)')),
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              letterSpacing: '0.5px',
+              textShadow: '0 2px 6px rgba(0,0,0,0.95)',
+              pointerEvents: 'none',
+              textAlign: 'center',
+              padding: '0 16px',
+              gap: '4px',
+            }}>
+              <span>{frameText}</span>
+              {cardSide === 'invalid_card' && (
+                <span style={{ fontSize: '0.75rem', color: '#fee2e2', fontWeight: 500 }}>
+                  Chỉ hỗ trợ thẻ Căn cước công dân gắn chip mới nhất
+                </span>
+              )}
+              {cardSide === 'back' && (
+                <span style={{ fontSize: '0.75rem', color: '#fef08a', fontWeight: 500 }}>
+                  Vui lòng lật lại mặt trước để trích xuất 8 trường thông tin
+                </span>
+              )}
             </div>
 
+            {/* THANH QUÉT ANIMATION */}
             <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-              <div style={{ width: '100%', height: '2px', background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)', boxShadow: '0 0 10px #38bdf8', animation: 'scanMove 2.2s ease-in-out infinite' }} />
+              <div style={{
+                width: '100%',
+                height: '2px',
+                background: `linear-gradient(90deg, transparent, ${badgeColor}, transparent)`,
+                boxShadow: `0 0 10px ${badgeColor}`,
+                animation: 'scanMove 2.2s ease-in-out infinite',
+              }} />
             </div>
           </div>
 
@@ -316,18 +442,44 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
             <button
               type="button"
               className="btn btn-primary"
-              style={{ padding: '10px 24px', fontWeight: 700 }}
-              disabled={isCapturing}
+              style={{
+                padding: '10px 24px',
+                fontWeight: 700,
+                background: !canCapture
+                  ? (cardSide === 'invalid_card' ? '#b91c1c' : (cardSide === 'back' ? '#d97706' : '#64748b'))
+                  : '#22c55e',
+                color: '#fff',
+                opacity: (!canCapture && !isCapturing) ? 0.75 : 1,
+                cursor: (!canCapture || isCapturing) ? 'not-allowed' : 'pointer',
+                borderColor: 'transparent',
+                boxShadow: canCapture ? '0 0 16px rgba(34, 197, 94, 0.45)' : 'none',
+                transition: 'all 0.2s ease',
+              }}
+              disabled={isCapturing || !canCapture}
               onClick={captureCurrentFrame}
+              title={
+                cardSide === 'invalid_card'
+                  ? 'Không thể chụp thẻ khác (Chỉ hỗ trợ thẻ CCCD gắn chip)'
+                  : (cardSide === 'back'
+                    ? 'Đây là mặt sau của CCCD! Vui lòng lật lại mặt trước'
+                    : (canCapture ? 'Bấm để chụp hoặc nhấn Space' : 'Căn mặt trước thẻ CCCD vào khung để chụp'))
+              }
             >
               <svg className="svg-icon" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19 4h-3.5L14 2H10L8.5 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
               </svg>
-              {isCapturing ? 'Đang chụp...' : 'Chụp Ảnh Ngay (Space)'}
+              {isCapturing
+                ? 'Đang chụp...'
+                : (cardSide === 'invalid_card'
+                  ? '❌ Chặn Chụp (Không phải CCCD)'
+                  : (cardSide === 'back'
+                    ? '⚠️ Lật Lại Mặt Trước'
+                    : (canCapture ? 'Chụp Ảnh Ngay (Space)' : '🔍 Đang Tìm CCCD...')))}
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );

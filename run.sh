@@ -19,10 +19,19 @@ fi
 CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
 export SSL_CERT_FILE="$CERT_FILE"
 
+# Tự động giải phóng cổng 8000 nếu đang có tiến trình cũ chiếm dụng
+PORT="${PORT:-8000}"
+EXISTING_PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
+if [ -n "$EXISTING_PID" ]; then
+  echo "⚠️ Cổng $PORT đang có tiến trình chạy (PID: $EXISTING_PID). Đang giải phóng cổng..."
+  kill -9 $EXISTING_PID 2>/dev/null || true
+  sleep 1
+fi
+
 # Use the project virtual environment Python if available
 PYTHON_EXEC=".venv/bin/python3"
 if [ -x "$PYTHON_EXEC" ]; then
-  "$PYTHON_EXEC" main.py
+  exec "$PYTHON_EXEC" main.py
 else
-  python3 main.py
+  exec python3 main.py
 fi
