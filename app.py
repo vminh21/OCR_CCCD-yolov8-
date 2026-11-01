@@ -28,35 +28,9 @@ except ImportError:
     pkg_res_mock.get_distribution = lambda name: DummyDist()
     sys.modules["pkg_resources"] = pkg_res_mock
 
-# Hotfix tương thích Gradio với schema Pydantic v2
-try:
-    import gradio_client.utils as client_utils
-    _orig_json_schema = client_utils._json_schema_to_python_type
-    def _safe_json_schema(schema, defs=None):
-        if isinstance(schema, bool):
-            return "typing.Any"
-        return _orig_json_schema(schema, defs)
-    client_utils._json_schema_to_python_type = _safe_json_schema
-except Exception as e:
-    pass
-
 import gradio as gr
-from gradio.routes import App
-from starlette.routing import Route
-from fastapi.responses import HTMLResponse
-from backend.main import app as fastapi_app, ROOT_DIR
+from backend.main import app as fastapi_app
 from backend.core.pipeline import process_cccd
-
-dist_index = ROOT_DIR / "frontend" / "dist" / "index.html"
-template_index = ROOT_DIR / "frontend" / "templates" / "index.html"
-
-def get_index_content():
-    if dist_index.exists():
-        return dist_index.read_text(encoding="utf-8")
-    if template_index.exists():
-        return template_index.read_text(encoding="utf-8")
-    return "<h1>CCCD OCR API is running</h1>"
-
 
 @spaces.GPU(duration=60)
 def predict_gpu(image_file):
@@ -68,7 +42,6 @@ def predict_gpu(image_file):
     except Exception as e:
         return {"error": str(e)}
 
-
 # 1. Khởi tạo Gradio Blocks chứa hàm ZeroGPU @spaces.GPU
 with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     gr.Markdown("### CCCD OCR Backend Engine (NVIDIA A10G GPU)")
@@ -77,26 +50,12 @@ with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     btn = gr.Button("Trích xuất thông tin")
     btn.click(fn=predict_gpu, inputs=[inp], outputs=[out])
 
-# 2. Hook App.create_app để chèn 100% Giao diện Facebook UI vào trang chủ "/" và mount toàn bộ API
-orig_create_app = App.create_app
-
-@staticmethod
-def patched_create_app(*args, **kwargs):
-    try:
-        app = orig_create_app(*args, **kwargs)
-    except TypeError:
-        sig = inspect.signature(orig_create_app)
-        filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
-        app = orig_create_app(*args, **filtered)
-    # Giao diện Facebook UI (React build) luôn được ưu tiên khớp đầu tiên tại trang chủ "/"
-    app.routes.insert(0, Route("/", lambda req: HTMLResponse(get_index_content()), methods=["GET"]))
-    # Gắn toàn bộ router và static media từ fastapi_app
-    app.mount("/", fastapi_app)
-    return app
-
-App.create_app = patched_create_app
+# 2. Tích hợp Gradio App vào FastAPI Root App chuẩn
+app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR Facebook UI Server launching on 0.0.0.0:{port}...")
-    demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False)
+    uvicorn.run(app, host="0.0.0.0", port=port)
+

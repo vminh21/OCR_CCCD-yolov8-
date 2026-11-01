@@ -86,7 +86,7 @@ def process_cccd(image_path):
     # 5. STAGE 2: EXTRACT FIELDS (YOLO)
     print("[4/7] Extracting data...")
     field_images = extract_fields_yolo(enhanced)
-    if not field_images or len(field_images) < 2 or ('so_cccd' not in field_images and 'ho_ten' not in field_images):
+    if not field_images or len(field_images) < 4 or 'so_cccd' not in field_images or 'ho_ten' not in field_images:
         raise ValueError("Sai định dạng CCCD! Hệ thống chỉ hỗ trợ thẻ Căn cước công dân gắn chip chuẩn mới nhất.")
 
     # Extract Avatar (if configured)
