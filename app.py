@@ -27,6 +27,18 @@ except ImportError:
     pkg_res_mock.get_distribution = lambda name: DummyDist()
     sys.modules["pkg_resources"] = pkg_res_mock
 
+# Patch Gradio Client schema parser bug on OpenAPI 3.1 boolean additionalProperties
+try:
+    import gradio_client.utils as client_utils
+    orig_json_schema = client_utils._json_schema_to_python_type
+    def safe_json_schema_to_python_type(schema, defs):
+        if isinstance(schema, bool) or not isinstance(schema, dict):
+            return "Any"
+        return orig_json_schema(schema, defs)
+    client_utils._json_schema_to_python_type = safe_json_schema_to_python_type
+except Exception:
+    pass
+
 import gradio as gr
 from fastapi.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount
@@ -46,27 +58,29 @@ def get_index_content():
     return "<h1>CCCD OCR API is running</h1>"
 
 @spaces.GPU(duration=60)
-def predict_gpu(image_file):
+def predict_gpu(image_path: str):
     """Hàm xử lý AI tăng tốc bằng GPU A10G cho Hugging Face Spaces"""
-    if not image_file:
-        return {"error": "Vui lòng chọn ảnh"}
+    if not image_path:
+        return "Vui lòng nhập đường dẫn ảnh"
     try:
-        return process_cccd(image_file)
+        import json
+        res = process_cccd(image_path)
+        return json.dumps(res, ensure_ascii=False, indent=2)
     except Exception as e:
-        return {"error": str(e)}
+        return f"Error: {str(e)}"
 
 # 1. Khởi tạo Gradio Blocks chứa hàm ZeroGPU @spaces.GPU để vượt qua bài kiểm tra ZeroGPU của Hugging Face
 with gr.Blocks(title="CCCD OCR AI Engine") as demo:
     gr.Markdown("### CCCD OCR Backend Engine (NVIDIA A10G GPU)")
-    inp = gr.Image(label="Ảnh đầu vào", type="filepath")
-    out = gr.JSON(label="Kết quả trích xuất")
+    inp = gr.Textbox(label="Đường dẫn ảnh kiểm tra")
+    out = gr.Textbox(label="Kết quả trích xuất")
     btn = gr.Button("Trích xuất thông tin")
     btn.click(fn=predict_gpu, inputs=[inp], outputs=[out])
 
 # 2. Tinh chỉnh demo.app để chèn giao diện Facebook UI và static assets trước các route nội tại của Gradio
 app = demo.app
 
-# Route "/" phục vụ Facebook UI với headers no-cache
+# Route "/" phục vụ Facebook UI với headers no-cache (hỗ trợ cả GET và HEAD cho Gradio healthcheck)
 async def serve_facebook_home(request):
     if dist_index.exists():
         return FileResponse(
@@ -79,7 +93,7 @@ async def serve_facebook_home(request):
         )
     return HTMLResponse(get_index_content())
 
-app.routes.insert(0, Route("/", serve_facebook_home, methods=["GET"]))
+app.routes.insert(0, Route("/", serve_facebook_home, methods=["GET", "HEAD"]))
 
 # Chèn Mount "/assets" và "/media" TRƯỚC route nội tại "/assets/{path:path}" của Gradio
 if (dist_path / "assets").exists():
@@ -94,4 +108,5 @@ app.mount("/", fastapi_app)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     print(f"[Startup] CCCD OCR Facebook UI Server launching on 0.0.0.0:{port}...")
-    demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False)
+    demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False, show_api=False)
+
