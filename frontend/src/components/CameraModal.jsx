@@ -18,6 +18,8 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
   const [frameText, setFrameText] = useState('CĂN MẶT TRƯỚC CCCD VÀO ĐÂY');
 
   const probeTimerRef = useRef(null);
+  const isProbingRef = useRef(false);
+  const probeAbortControllerRef = useRef(null);
   const isCapturingRef = useRef(false);
   const canCaptureRef = useRef(false);
   const cardSideRef = useRef('none');
@@ -53,6 +55,13 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
       clearInterval(probeTimerRef.current);
       probeTimerRef.current = null;
     }
+    if (probeAbortControllerRef.current) {
+      try {
+        probeAbortControllerRef.current.abort();
+      } catch (e) {}
+      probeAbortControllerRef.current = null;
+    }
+    isProbingRef.current = false;
     if (stream) {
       try {
         stream.getTracks().forEach((t) => t.stop());
@@ -146,28 +155,53 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
 
   const startProbeLoop = () => {
     if (probeTimerRef.current) clearInterval(probeTimerRef.current);
+    isProbingRef.current = false;
+
     probeTimerRef.current = setInterval(async () => {
-      if (isCapturingRef.current || !videoRef.current || !canvasRef.current) return;
+      if (isCapturingRef.current || isProbingRef.current || !videoRef.current || !canvasRef.current) return;
 
       const video = videoRef.current;
       if (video.readyState < 2 || video.videoWidth === 0) return;
 
       const canvas = canvasRef.current;
-      canvas.width = 640;
-      canvas.height = 360;
+      // Dung lượng siêu nhẹ ~15KB giúp probe mượt mà qua mạng Internet / Hugging Face
+      canvas.width = 480;
+      canvas.height = 270;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      canvas.toBlob(async (blob) => {
-        if (!blob || isCapturingRef.current) return;
-        try {
-          const res = await apiProbeCamera(blob);
-          if (!res.ok) return;
-          const data = await res.json();
-          handleProbeFeedback(data);
-        } catch (e) {}
-      }, 'image/jpeg', 0.65);
-    }, 450);
+      isProbingRef.current = true;
+      try {
+        canvas.toBlob(async (blob) => {
+          if (!blob || isCapturingRef.current) {
+            isProbingRef.current = false;
+            return;
+          }
+
+          const controller = new AbortController();
+          probeAbortControllerRef.current = controller;
+          const timeoutId = setTimeout(() => {
+            try { controller.abort(); } catch (e) {}
+          }, 2500);
+
+          try {
+            const res = await apiProbeCamera(blob, controller.signal);
+            clearTimeout(timeoutId);
+            if (res && res.ok) {
+              const data = await res.json();
+              handleProbeFeedback(data);
+            }
+          } catch (e) {
+            // Lỗi probe hoặc timeout thì bỏ qua
+          } finally {
+            clearTimeout(timeoutId);
+            isProbingRef.current = false;
+          }
+        }, 'image/jpeg', 0.55);
+      } catch (err) {
+        isProbingRef.current = false;
+      }
+    }, 500);
   };
 
   const handleProbeFeedback = (data) => {
@@ -228,14 +262,12 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
   const captureCurrentFrame = () => {
     if (isCapturingRef.current || !videoRef.current || !canvasRef.current) return;
 
-    if (!canCaptureRef.current) {
-      if (cardSideRef.current === 'invalid_card') {
-        showToast('❌ Thẻ không hợp lệ! Vui lòng chỉ dùng thẻ CCCD gắn chip.', false);
-      } else if (cardSideRef.current === 'back') {
-        showToast('⚠️ Đây là mặt sau của CCCD! Vui lòng lật lại mặt trước để trích xuất.', false);
-      } else {
-        showToast('🔍 Vui lòng căn chỉnh mặt trước thẻ CCCD rõ nét vào khung trước khi chụp!', false);
-      }
+    if (cardSideRef.current === 'invalid_card') {
+      showToast('❌ Thẻ không hợp lệ! Vui lòng chỉ dùng thẻ CCCD gắn chip.', false);
+      return;
+    }
+    if (cardSideRef.current === 'back') {
+      showToast('⚠️ Đây là mặt sau của CCCD! Vui lòng lật lại mặt trước để trích xuất.', false);
       return;
     }
 
@@ -439,44 +471,64 @@ export default function CameraModal({ isOpen, onClose, onCapture, onNativeCaptur
             <button type="button" className="btn btn-outline" style={{ padding: '10px 18px' }} onClick={onClose}>
               Đóng
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{
-                padding: '10px 24px',
-                fontWeight: 700,
-                background: !canCapture
-                  ? (cardSide === 'invalid_card' ? '#b91c1c' : (cardSide === 'back' ? '#d97706' : '#64748b'))
-                  : '#22c55e',
-                color: '#fff',
-                opacity: (!canCapture && !isCapturing) ? 0.75 : 1,
-                cursor: (!canCapture || isCapturing) ? 'not-allowed' : 'pointer',
-                borderColor: 'transparent',
-                boxShadow: canCapture ? '0 0 16px rgba(34, 197, 94, 0.45)' : 'none',
-                transition: 'all 0.2s ease',
-              }}
-              disabled={isCapturing || !canCapture}
-              onClick={captureCurrentFrame}
-              title={
-                cardSide === 'invalid_card'
-                  ? 'Không thể chụp thẻ khác (Chỉ hỗ trợ thẻ CCCD gắn chip)'
-                  : (cardSide === 'back'
-                    ? 'Đây là mặt sau của CCCD! Vui lòng lật lại mặt trước'
-                    : (canCapture ? 'Bấm để chụp hoặc nhấn Space' : 'Căn mặt trước thẻ CCCD vào khung để chụp'))
+            {(() => {
+              const isInvalid = cardSide === 'invalid_card';
+              const isBack = cardSide === 'back';
+              const isBlocked = isInvalid || isBack;
+              const btnDisabled = isCapturing || isBlocked;
+
+              let btnBg = 'var(--primary)';
+              let btnText = '📸 Chụp Ảnh Thủ Công (Space)';
+              let btnBoxShadow = 'none';
+
+              if (canCapture) {
+                btnBg = '#22c55e';
+                btnText = '✅ Chụp Ảnh Ngay (Space)';
+                btnBoxShadow = '0 0 16px rgba(34, 197, 94, 0.45)';
+              } else if (isInvalid) {
+                btnBg = '#b91c1c';
+                btnText = '❌ Chặn Chụp (Không phải CCCD)';
+              } else if (isBack) {
+                btnBg = '#d97706';
+                btnText = '⚠️ Lật Lại Mặt Trước';
+              } else if (isCapturing) {
+                btnBg = '#475569';
+                btnText = 'Đang chụp...';
               }
-            >
-              <svg className="svg-icon" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19 4h-3.5L14 2H10L8.5 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-              </svg>
-              {isCapturing
-                ? 'Đang chụp...'
-                : (cardSide === 'invalid_card'
-                  ? '❌ Chặn Chụp (Không phải CCCD)'
-                  : (cardSide === 'back'
-                    ? '⚠️ Lật Lại Mặt Trước'
-                    : (canCapture ? 'Chụp Ảnh Ngay (Space)' : '🔍 Đang Tìm CCCD...')))}
-            </button>
+
+              return (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '10px 24px',
+                    fontWeight: 700,
+                    background: btnBg,
+                    color: '#fff',
+                    opacity: btnDisabled ? 0.75 : 1,
+                    cursor: btnDisabled ? 'not-allowed' : 'pointer',
+                    borderColor: 'transparent',
+                    boxShadow: btnBoxShadow,
+                    transition: 'all 0.2s ease',
+                  }}
+                  disabled={btnDisabled}
+                  onClick={captureCurrentFrame}
+                  title={
+                    isInvalid
+                      ? 'Không thể chụp thẻ khác (Chỉ hỗ trợ thẻ CCCD gắn chip)'
+                      : (isBack
+                        ? 'Đây là mặt sau của CCCD! Vui lòng lật lại mặt trước'
+                        : (canCapture ? 'Bấm để chụp hoặc nhấn Space' : 'Bấm để chụp ngay khung hình hiện tại'))
+                  }
+                >
+                  <svg className="svg-icon" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19 4h-3.5L14 2H10L8.5 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+                  </svg>
+                  {btnText}
+                </button>
+              );
+            })()}
           </div>
         </div>
 

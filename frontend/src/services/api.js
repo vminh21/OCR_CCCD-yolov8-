@@ -219,13 +219,14 @@ export async function apiPredictImage(fileOrBlob, inputSource = 'IMAGE', evaluat
   return res;
 }
 
-export async function apiProbeCamera(fileOrBlob) {
+export async function apiProbeCamera(fileOrBlob, signal) {
   const formData = new FormData();
   formData.append('file', fileOrBlob, 'camera_frame.jpg');
 
   const res = await apiRequest('/predict/camera-probe', {
     method: 'POST',
     body: formData,
+    signal,
   });
   return res;
 }
