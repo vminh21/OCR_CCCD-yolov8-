@@ -1,12 +1,39 @@
 // frontend/src/tabs/ProfileTab.jsx
-import React, { useState } from 'react';
-import { apiChangePassword } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import {
+  apiChangePassword,
+  getUserAIKey,
+  setUserAIKey,
+  getUserAIProvider,
+  removeUserAIKey,
+  apiGetEvaluateStatus,
+  apiTestEvaluateKey
+} from '../services/api';
 
 export default function ProfileTab({ currentUser, onLogout, showToast }) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // AI Key state
+  const [userKey, setUserKeyState] = useState('');
+  const [provider, setProvider] = useState('gemini');
+  const [showKey, setShowKey] = useState(false);
+  const [systemStatus, setSystemStatus] = useState(null);
+  const [isTestingKey, setIsTestingKey] = useState(false);
+  const [keyTestMessage, setKeyTestMessage] = useState(null);
+
+  useEffect(() => {
+    setUserKeyState(getUserAIKey());
+    setProvider(getUserAIProvider());
+    // Lấy trạng thái hệ thống từ backend
+    apiGetEvaluateStatus()
+      .then((res) => res.json())
+      .then((data) => setSystemStatus(data))
+      .catch(() => {});
+  }, []);
+
 
   const formattedCreatedDate = currentUser?.created_at
     ? new Date(currentUser.created_at).toLocaleString('vi-VN', {
@@ -56,7 +83,50 @@ export default function ProfileTab({ currentUser, onLogout, showToast }) {
     }
   };
 
+  const handleSaveKey = () => {
+    if (!userKey.trim()) {
+      removeUserAIKey();
+      setUserKeyState('');
+      if (showToast) showToast('Đã xóa key cá nhân, hệ thống sẽ dùng key mặc định từ .env', true);
+      return;
+    }
+    setUserAIKey(userKey.trim(), provider);
+    if (showToast) showToast('✅ Đã lưu API Key cá nhân vào trình duyệt thành công!', true);
+  };
+
+  const handleClearKey = () => {
+    removeUserAIKey();
+    setUserKeyState('');
+    setKeyTestMessage(null);
+    if (showToast) showToast('Đã xóa key cá nhân. Quay lại dùng key mặc định hệ thống (.env).', true);
+  };
+
+  const handleTestKey = async () => {
+    setIsTestingKey(true);
+    setKeyTestMessage(null);
+    try {
+      const res = await apiTestEvaluateKey(userKey.trim(), provider);
+      const data = await res.json();
+      setKeyTestMessage(data);
+      if (data.valid) {
+        if (showToast) showToast('✅ ' + data.message, true);
+      } else {
+        if (showToast) showToast('❌ ' + data.message, false);
+      }
+    } catch (err) {
+      const errMsg = 'Lỗi kết nối kiểm tra key: ' + err.message;
+      setKeyTestMessage({ valid: false, message: errMsg });
+      if (showToast) showToast(errMsg, false);
+    } finally {
+      setIsTestingKey(false);
+    }
+  };
+
+  const hasSystemKey = systemStatus?.system_key_configured;
+  const isUsingUserKey = !!userKey.trim();
+
   return (
+
     <div className="profile-grid">
       {/* KHUNG 1: THÔNG TIN TÀI KHOẢN */}
       <div className="card">
@@ -247,6 +317,152 @@ export default function ProfileTab({ currentUser, onLogout, showToast }) {
           </div>
         </form>
       </div>
+
+      {/* KHUNG 3: CẤU HÌNH API KEY THẨM ĐỊNH (AI ORACLE GROUND TRUTH) */}
+      <div className="card" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+        <h2>
+          <span className="card-title-left">
+            <span className="card-icon-badge" style={{ background: '#ecfdf5', color: '#059669' }}>
+              <svg className="svg-icon" viewBox="0 0 24 24">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+              </svg>
+            </span>
+            <span>Cấu Hình API Key Thẩm Định Tự Động (AI Oracle)</span>
+          </span>
+          {isUsingUserKey ? (
+            <span className="badge badge-info" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+              🔑 Đang dùng Key cá nhân
+            </span>
+          ) : hasSystemKey ? (
+            <span className="badge badge-success" style={{ background: '#dcfce7', color: '#16a34a' }}>
+              🟢 Đang dùng Key hệ thống (.env)
+            </span>
+          ) : (
+            <span className="badge badge-warning" style={{ background: '#fef3c7', color: '#d97706' }}>
+              ⚪ Chưa có Key mặc định
+            </span>
+          )}
+        </h2>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+          {/* CHỌN PROVIDER */}
+          <div className="field-group">
+            <label style={{ fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Mô hình Vision AI thẩm định:
+            </label>
+            <div style={{ display: 'flex', gap: '20px', marginTop: '6px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+                <input
+                  type="radio"
+                  name="ai_provider"
+                  value="gemini"
+                  checked={provider === 'gemini'}
+                  onChange={(e) => setProvider(e.target.value)}
+                />
+                <span>Google Gemini Flash (Miễn phí - Khuyên dùng)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+                <input
+                  type="radio"
+                  name="ai_provider"
+                  value="openai"
+                  checked={provider === 'openai'}
+                  onChange={(e) => setProvider(e.target.value)}
+                />
+                <span>OpenAI (GPT-4o-mini Vision)</span>
+              </label>
+            </div>
+          </div>
+
+          {/* NHẬP KEY */}
+          <div className="field-group">
+            <label style={{ fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>
+                {isUsingUserKey ? '🔑 API Key Cá Nhân Đang Lưu Trên Trình Duyệt:' : '🔑 Nhập API Key Cá Nhân Mới (Tùy chọn):'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
+              >
+                {showKey ? '🙈 Ẩn Key' : '👁️ Hiện Key'}
+              </button>
+            </label>
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={userKey}
+              onChange={(e) => setUserKeyState(e.target.value)}
+              placeholder={
+                provider === 'gemini'
+                  ? 'Dán key Google Gemini vào đây...'
+                  : 'Dán key OpenAI vào đây...'
+              }
+              style={{ fontFamily: 'monospace', letterSpacing: showKey ? 'normal' : '2px', padding: '12px' }}
+            />
+          </div>
+
+          {/* TEST MESSAGE NẾU CÓ */}
+          {keyTestMessage && (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                fontSize: '0.88rem',
+                background: keyTestMessage.valid ? '#ecfdf5' : '#fef2f2',
+                border: `1px solid ${keyTestMessage.valid ? '#a7f3d0' : '#fecaca'}`,
+                color: keyTestMessage.valid ? '#065f46' : '#991b1b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>{keyTestMessage.valid ? '✅' : '❌'}</span>
+              <div>
+                <div><strong>{keyTestMessage.message}</strong></div>
+                {keyTestMessage.model && (
+                  <div style={{ fontSize: '0.8rem', opacity: 0.9, marginTop: '2px' }}>
+                    Mô hình phản hồi: <code>{keyTestMessage.model}</code> | Nguồn key: <code>{keyTestMessage.source === 'user' ? 'Cá nhân (Trình duyệt)' : 'Mặc định (.env)'}</code>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* HÀNG NÚT BẤM */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSaveKey}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <span>💾 Lưu Key Cá Nhân</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleTestKey}
+              disabled={isTestingKey}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <span>{isTestingKey ? '⏳ Đang kiểm tra kết nối...' : `⚡ Kiểm Tra Kết Nối (${userKey.trim() ? 'Key Vừa Nhập' : 'Key .env Mặc Định'})`}</span>
+            </button>
+
+            {isUsingUserKey && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleClearKey}
+                style={{ color: '#ef4444', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>🔄 Xóa Key Cá Nhân (Quay Lại Dùng .env)</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+

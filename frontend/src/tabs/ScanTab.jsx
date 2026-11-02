@@ -1,6 +1,15 @@
 // frontend/src/tabs/ScanTab.jsx
-import React, { useState, useRef } from 'react';
-import { apiPredictImage, apiUpdateResult } from '../services/api';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  apiPredictImage,
+  apiUpdateResult,
+  apiEvaluateOnDemand,
+  getUserAIKey,
+  setUserAIKey,
+  apiTestEvaluateKey,
+  apiGetEvaluateStatus
+} from '../services/api';
+import AIComparisonModal from '../components/AIComparisonModal';
 
 export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, onClearLoadedRecord, showToast }) {
   const [file, setFile] = useState(null);
@@ -9,6 +18,19 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
   const [sourceBadge, setSourceBadge] = useState('Sẵn sàng');
   const [sourceType, setSourceType] = useState('IMAGE'); // IMAGE | WEBCAM | VIDEO
   const [saving, setSaving] = useState(false);
+
+  // AI Evaluation state
+  const [evaluateWithAi, setEvaluateWithAi] = useState(true);
+  const [evaluationResult, setEvaluationResult] = useState(null);
+  const [showEvalModal, setShowEvalModal] = useState(false);
+  const [isEvaluatingOnDemand, setIsEvaluatingOnDemand] = useState(false);
+
+  // Quick API Key state
+  const [showKeyBox, setShowKeyBox] = useState(false);
+  const [quickKey, setQuickKey] = useState('');
+  const [isTestingQuickKey, setIsTestingQuickKey] = useState(false);
+  const [quickKeyMsg, setQuickKeyMsg] = useState(null);
+  const [systemKeyConfigured, setSystemKeyConfigured] = useState(false);
 
   const [currentScanId, setCurrentScanId] = useState(null);
   const [currentResultId, setCurrentResultId] = useState(null);
@@ -24,9 +46,20 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
     ngay_het_han: '',
   });
 
+
   const fileInputRef = useRef(null);
   const nativeCameraInputRef = useRef(null);
   const dropzoneRef = useRef(null);
+  const evalSectionRef = useRef(null);
+
+  const handleOpenEvalDetail = () => {
+    setShowEvalModal(true);
+    setTimeout(() => {
+      if (evalSectionRef.current) {
+        evalSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
 
   // Lắng nghe khi người dùng bấm "Tải vào Form Tab 1 để quét lại" từ Bảng kết quả (Tab 2)
   React.useEffect(() => {
@@ -53,6 +86,46 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
       if (onClearLoadedRecord) onClearLoadedRecord();
     }
   }, [loadedRecord]);
+
+  useEffect(() => {
+    const k = getUserAIKey();
+    if (k) setQuickKey(k);
+    apiGetEvaluateStatus()
+      .then((res) => res.json())
+      .then((data) => setSystemKeyConfigured(!!data?.system_key_configured))
+      .catch(() => {});
+  }, []);
+
+  const handleSaveQuickKey = () => {
+    if (!quickKey.trim()) {
+      setUserAIKey('', 'gemini');
+      if (showToast) showToast('Đã xóa key cá nhân, hệ thống sẽ dùng key .env', true);
+      setQuickKeyMsg({ valid: true, message: 'Đã chuyển về dùng key mặc định từ file .env' });
+      return;
+    }
+    setUserAIKey(quickKey.trim(), 'gemini');
+    if (showToast) showToast('✅ Đã lưu API Key cá nhân thành công!', true);
+    setQuickKeyMsg({ valid: true, message: 'Đã lưu key cá nhân vào trình duyệt!' });
+  };
+
+  const handleTestQuickKey = async () => {
+    setIsTestingQuickKey(true);
+    setQuickKeyMsg(null);
+    try {
+      const res = await apiTestEvaluateKey(quickKey.trim(), 'gemini');
+      const data = await res.json();
+      setQuickKeyMsg(data);
+      if (data.valid) {
+        if (showToast) showToast('✅ ' + data.message, true);
+      } else {
+        if (showToast) showToast('❌ ' + data.message, false);
+      }
+    } catch (err) {
+      setQuickKeyMsg({ valid: false, message: 'Lỗi: ' + err.message });
+    } finally {
+      setIsTestingQuickKey(false);
+    }
+  };
 
   const handleFieldChange = (field, val) => {
     setFormData((prev) => ({ ...prev, [field]: val }));
@@ -100,7 +173,7 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
     });
 
     try {
-      const res = await apiPredictImage(fileOrBlob, sourceVal);
+      const res = await apiPredictImage(fileOrBlob, sourceVal, evaluateWithAi);
       const data = await res.json();
 
       if (!res.ok || data.error) {
@@ -129,6 +202,12 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
       setCurrentScanId(data.scan_id);
       setCurrentResultId(data.result_id);
 
+      if (data.ai_evaluation) {
+        setEvaluationResult(data.ai_evaluation);
+      } else {
+        setEvaluationResult(null);
+      }
+
       setStatus({
         state: 'success',
         message: '✅ Nhận diện thành công! Đã khoanh vùng 8 trường và lưu vào CSDL.',
@@ -138,6 +217,23 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
       setStatus({ state: 'error', message: '❌ Lỗi kết nối: ' + err.message });
       showToast('❌ Lỗi kết nối: ' + err.message, false);
     }
+  };
+
+  const handleApplyOracleData = (oracleData) => {
+    if (!oracleData) return;
+    setFormData((prev) => ({
+      ...prev,
+      so_cccd: oracleData.so_cccd || prev.so_cccd,
+      ho_ten: oracleData.ho_ten || prev.ho_ten,
+      ngay_sinh: oracleData.ngay_sinh || prev.ngay_sinh,
+      gioi_tinh: oracleData.gioi_tinh || prev.gioi_tinh,
+      quoc_tich: oracleData.quoc_tich || prev.quoc_tich,
+      que_quan: oracleData.que_quan || prev.que_quan,
+      noi_ctru: oracleData.noi_ctru || prev.noi_ctru,
+      ngay_het_han: oracleData.ngay_het_han || prev.ngay_het_han,
+    }));
+    setShowEvalModal(false);
+    showToast('✅ Đã áp dụng dữ liệu AI chuẩn vào form!', true);
   };
 
   const resetFieldsOnly = () => {
@@ -153,6 +249,7 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
     });
     setCurrentScanId(null);
     setCurrentResultId(null);
+    setEvaluationResult(null);
   };
 
   // NÚT LÀM MỚI / RESET FORM SAU KHI LƯU
@@ -160,6 +257,7 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
     resetFieldsOnly();
     setPreviewSrc('');
     setFile(null);
+
     setStatus({ state: 'ready', message: '' });
     setSourceBadge('Sẵn sàng');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -330,6 +428,94 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
           </button>
         </div>
 
+        {/* CÔNG TẮC THẨM ĐỊNH AI & CẤU HÌNH KEY NHANH */}
+        <div
+          style={{
+            marginTop: '12px',
+            padding: '12px 14px',
+            background: '#f8fafc',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
+              <input
+                type="checkbox"
+                checked={evaluateWithAi}
+                onChange={(e) => setEvaluateWithAi(e.target.checked)}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+              />
+              <span>⚡ Tự động thẩm định & tính % độ chính xác AI</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowKeyBox(!showKeyBox)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary)',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>⚙️ {showKeyBox ? 'Đóng cấu hình Key' : 'Cấu hình API Key'}</span>
+            </button>
+          </div>
+
+          {showKeyBox && (
+            <div style={{ paddingTop: '10px', borderTop: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                Trạng thái: {getUserAIKey() ? (
+                  <strong style={{ color: '#0284c7' }}>🔑 Đang dùng Key cá nhân</strong>
+                ) : systemKeyConfigured ? (
+                  <strong style={{ color: '#16a34a' }}>🟢 Đang dùng Key hệ thống (.env)</strong>
+                ) : (
+                  <strong style={{ color: '#d97706' }}>⚪ Chưa cấu hình Key</strong>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="password"
+                  placeholder="Dán Google Gemini API Key (AQ... hoặc AIzaSy...)"
+                  value={quickKey}
+                  onChange={(e) => setQuickKey(e.target.value)}
+                  style={{ flex: 1, padding: '7px 10px', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveQuickKey}
+                  style={{ padding: '7px 12px', fontSize: '0.8rem' }}
+                >
+                  Lưu
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleTestQuickKey}
+                  disabled={isTestingQuickKey}
+                  style={{ padding: '7px 12px', fontSize: '0.8rem' }}
+                >
+                  {isTestingQuickKey ? '...' : 'Kiểm tra'}
+                </button>
+              </div>
+              {quickKeyMsg && (
+                <div style={{ fontSize: '0.8rem', color: quickKeyMsg.valid ? '#16a34a' : '#dc2626', fontWeight: 500 }}>
+                  {quickKeyMsg.valid ? '✅ ' : '❌ '}{quickKeyMsg.message}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {previewSrc && (
           <img
             src={previewSrc}
@@ -363,7 +549,93 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
           <span className="badge badge-success">Chuẩn Căn Cước 2024</span>
         </h2>
 
+        {/* BANNER ĐỘ CHÍNH XÁC AI */}
+        {evaluationResult && evaluationResult.status === 'success' && (
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.3rem' }}>🎯</span>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>Độ chính xác AI:</span>
+                  <span
+                    style={{
+                      fontWeight: 800,
+                      fontSize: '1.1rem',
+                      color:
+                        evaluationResult.overall_accuracy >= 95
+                          ? '#16a34a'
+                          : evaluationResult.overall_accuracy >= 85
+                          ? '#0284c7'
+                          : '#d97706'
+                    }}
+                  >
+                    {evaluationResult.overall_accuracy}%
+                  </span>
+                  <span
+                    className={`badge ${
+                      evaluationResult.overall_accuracy >= 95
+                        ? 'badge-success'
+                        : evaluationResult.overall_accuracy >= 85
+                        ? 'badge-info'
+                        : 'badge-warning'
+                    }`}
+                    style={{ fontSize: '0.75rem', padding: '2px 6px' }}
+                  >
+                    {evaluationResult.overall_accuracy >= 95 ? 'Xuất Sắc' : evaluationResult.overall_accuracy >= 85 ? 'Tốt' : 'Khá'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                  Khớp {evaluationResult.matched_fields}/{evaluationResult.total_fields} trường • {evaluationResult.key_source === 'user' ? 'Key Cá Nhân' : 'Key Mặc Định .env'}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleOpenEvalDetail}
+              style={{ padding: '6px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <span>🔍 Xem Chi Tiết Đối Soát</span>
+            </button>
+          </div>
+        )}
+
+        {evaluationResult && evaluationResult.status === 'error' && (
+          <div
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              marginBottom: '16px',
+              fontSize: '0.85rem',
+              color: '#991b1b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <span>⚠️</span>
+            <span>{evaluationResult.message}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSaveEdited}>
+
           <div className="field-group">
             <label>1. Số Căn cước công dân (12 số chuẩn)</label>
             <input
@@ -477,6 +749,25 @@ export default function ScanTab({ onOpenCamModal, onSaveSuccess, loadedRecord, o
           </div>
         </form>
       </div>
+
+      {/* BẢNG ĐỐI SOÁT CHI TIẾT AI (DÀN HẾT RA TOÀN BỘ 2 CỘT & AUTO-SCROLL) */}
+      {showEvalModal && evaluationResult && (
+        <div
+          ref={evalSectionRef}
+          style={{
+            gridColumn: '1 / -1',
+            width: '100%',
+            scrollMarginTop: '20px'
+          }}
+        >
+          <AIComparisonModal
+            evaluation={evaluationResult}
+            onClose={() => setShowEvalModal(false)}
+            onApplyOracle={handleApplyOracleData}
+          />
+        </div>
+      )}
     </div>
   );
 }
+

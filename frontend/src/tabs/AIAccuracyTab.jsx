@@ -1,6 +1,7 @@
 // frontend/src/tabs/AIAccuracyTab.jsx
 import React, { useState, useEffect } from 'react';
-import { apiGetAIQuality, apiGetCorrections } from '../services/api';
+import { apiGetAIQuality, apiGetCorrections, getUserAIKey } from '../services/api';
+
 
 export default function AIAccuracyTab({ showToast }) {
   const [aiQuality, setAiQuality] = useState(null);
@@ -121,21 +122,39 @@ export default function AIAccuracyTab({ showToast }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-outline"
-          disabled={loading}
-          onClick={fetchQualityData}
-          title="Tải lại số liệu đánh giá mới nhất"
-        >
-          <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '14px', height: '14px' }}>
-            <polyline points="23 4 23 10 17 10" />
-            <polyline points="1 20 1 14 7 14" />
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-          </svg>
-          {loading ? 'Đang tải...' : 'Làm mới số liệu'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              padding: '4px 10px',
+              borderRadius: '12px',
+              background: getUserAIKey() ? '#e0f2fe' : '#ecfdf5',
+              color: getUserAIKey() ? '#0369a1' : '#047857',
+              border: `1px solid ${getUserAIKey() ? '#bae6fd' : '#a7f3d0'}`
+            }}
+            title="Quản lý và đổi API Key tại Tab Hồ Sơ Cá Nhân"
+          >
+            {getUserAIKey() ? '🔑 Đang dùng Key cá nhân' : '🌐 Dùng Key mặc định (.env)'}
+          </span>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            disabled={loading}
+            onClick={fetchQualityData}
+            title="Tải lại số liệu đánh giá mới nhất"
+          >
+            <svg className="svg-icon" viewBox="0 0 24 24" style={{ width: '14px', height: '14px' }}>
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            {loading ? 'Đang tải...' : 'Làm mới số liệu'}
+          </button>
+        </div>
       </div>
+
 
       {/* 4 THẺ KPI CHẤT LƯỢNG AI */}
       <div className="stats-grid">

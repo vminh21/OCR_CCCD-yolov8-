@@ -1,5 +1,5 @@
-# backend/api/routes_ocr.py
 import base64
+import json
 import logging
 import shutil
 import cv2
@@ -7,10 +7,17 @@ import numpy as np
 from pathlib import Path
 from typing import Optional
 
+
 from fastapi import APIRouter, UploadFile, File, Form, Header, HTTPException
 from fastapi.responses import JSONResponse
 
 from backend.core.pipeline import process_cccd
+from backend.core.ai_evaluator import (
+    evaluate_pipeline_with_ai,
+    is_system_key_configured,
+    test_api_key,
+    resolve_api_key
+)
 from backend.database.connection import SessionLocal
 from backend.database.crud import create_scan_and_save_result
 from backend.database.models import User
@@ -18,6 +25,7 @@ from backend.database.security import decode_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/predict", tags=["OCR & AI Pipeline"])
+
 
 
 @router.post("/camera-probe", summary="Thăm dò camera thời gian thực để hỗ trợ tự động chụp eKYC")
@@ -270,7 +278,10 @@ async def camera_probe_api(file: UploadFile = File(...)):
 async def predict_api(
     file: UploadFile = File(...),
     input_source: Optional[str] = Form("IMAGE"),
-    authorization: Optional[str] = Header(None)
+    evaluate_with_ai: Optional[bool] = Form(False),
+    authorization: Optional[str] = Header(None),
+    x_ai_api_key: Optional[str] = Header(None),
+    x_ai_provider: Optional[str] = Header("gemini")
 ):
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
     if ext not in ("jpg", "jpeg", "png", "bmp", "webp", "mp4", "avi", "mov", "mkv", "webm"):
@@ -321,6 +332,10 @@ async def predict_api(
                 result["visualization_base64"] = f"data:image/jpeg;base64,{encoded_img}"
 
         # 2. Tự động lưu vào PostgreSQL (lưu vào scan_history & cccd_results đủ 8 trường)
+        file_stem = Path(file.filename).stem
+        upload_stem = f"upload_{file_stem}"
+        crop_path_val = "/media/cccd_fields_visualization.jpg"
+
         try:
             db_session = SessionLocal()
             try:
@@ -348,8 +363,6 @@ async def predict_api(
                         "current_place": result.get("noi_ctru"),
                         "expire_date": result.get("ngay_het_han")
                     }
-                    file_stem = Path(file.filename).stem
-                    upload_stem = f"upload_{file_stem}"
 
                     # Lưu ảnh detect phân vùng màu sắc theo scan riêng biệt
                     viz_save_path = Path("data/output/cards") / f"{upload_stem}_viz.jpg"
@@ -399,9 +412,103 @@ async def predict_api(
         except Exception as db_err:
             logger.warning(f"Lưu kết quả vào CSDL thất bại: {db_err}")
 
+        # 3. Thẩm định độ chính xác bằng External Vision AI nếu được yêu cầu
+        if evaluate_with_ai:
+            try:
+                eval_bytes = contents
+                crop_local_path = Path("data/output/cards") / f"{upload_stem}_enhanced.jpg"
+                if not crop_local_path.exists():
+                    crop_local_path = Path("data/output/cards") / f"{upload_stem}_viz.jpg"
+                if crop_local_path.exists():
+                    with open(crop_local_path, "rb") as cf:
+                        eval_bytes = cf.read()
+
+                eval_res = evaluate_pipeline_with_ai(
+                    image_bytes=eval_bytes,
+                    local_result=result,
+                    user_key=x_ai_api_key,
+                    provider=x_ai_provider or "gemini"
+                )
+                result["ai_evaluation"] = eval_res
+            except Exception as eval_err:
+                logger.warning(f"Thẩm định AI thất bại: {eval_err}")
+                result["ai_evaluation"] = {
+                    "status": "error",
+                    "message": str(eval_err),
+                    "overall_accuracy": None
+                }
+        else:
+            result["ai_evaluation"] = None
+
         return result
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={"error": f"Lỗi xử lý server: {str(e)}"}
         )
+
+
+@router.get("/evaluate-status", summary="Kiểm tra trạng thái cấu hình AI Key của hệ thống")
+def get_evaluate_status():
+    has_gemini = is_system_key_configured("gemini")
+    has_openai = is_system_key_configured("openai")
+    gemini_key, _ = resolve_api_key(user_key=None, provider="gemini")
+    openai_key, _ = resolve_api_key(user_key=None, provider="openai")
+
+    masked_gemini = f"{gemini_key[:8]}...{gemini_key[-4:]}" if gemini_key and len(gemini_key) > 12 else None
+    masked_openai = f"{openai_key[:6]}...{openai_key[-4:]}" if openai_key and len(openai_key) > 10 else None
+
+    return {
+        "system_gemini_configured": has_gemini,
+        "system_openai_configured": has_openai,
+        "system_key_configured": has_gemini or has_openai,
+        "default_provider": "gemini" if has_gemini else ("openai" if has_openai else "gemini"),
+        "system_gemini_masked": masked_gemini,
+        "system_openai_masked": masked_openai
+    }
+
+
+@router.post("/evaluate-test-key", summary="Kiểm tra kết nối và tính hợp lệ của API Key")
+def post_test_api_key(
+    api_key: Optional[str] = Form(None),
+    provider: Optional[str] = Form("gemini")
+):
+    provider_clean = (provider or "gemini").lower().strip()
+    resolved_key, source = resolve_api_key(user_key=api_key, provider=provider_clean)
+    if not resolved_key:
+        return {
+            "valid": False,
+            "provider": provider_clean,
+            "source": "none",
+            "message": f"Chưa cấu hình API Key cho {provider_clean}. Vui lòng nhập key hoặc thêm vào file .env."
+        }
+
+    test_res = test_api_key(api_key=resolved_key, provider=provider_clean)
+    test_res["source"] = source
+    test_res["masked_key"] = f"{resolved_key[:8]}...{resolved_key[-4:]}" if len(resolved_key) > 12 else resolved_key
+    return test_res
+
+
+@router.post("/evaluate-on-demand", summary="Thẩm định độ chính xác theo yêu cầu cho kết quả đã quét")
+async def evaluate_on_demand_api(
+    file: UploadFile = File(...),
+    local_data_json: str = Form(...),
+    x_ai_api_key: Optional[str] = Header(None),
+    x_ai_provider: Optional[str] = Header("gemini")
+):
+    try:
+        contents = await file.read()
+        local_data = json.loads(local_data_json)
+        eval_res = evaluate_pipeline_with_ai(
+            image_bytes=contents,
+            local_result=local_data,
+            user_key=x_ai_api_key,
+            provider=x_ai_provider or "gemini"
+        )
+        return eval_res
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": f"Lỗi thẩm định: {str(e)}"}
+        )
+
