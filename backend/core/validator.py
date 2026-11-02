@@ -120,32 +120,45 @@ def clean_nationality(text: str) -> str:
 def clean_gender(raw_gender: str, id_number: str = "") -> str:
     """
     Hậu xử lý Giới tính:
-    1. Ưu tiên đối chiếu chéo với Số CCCD:
-       Chữ số thứ 4 (index 3) trong 12 số CCCD: Chẵn là NAM, Lẻ là NỮ.
-    2. Nếu không có số CCCD, bắt toàn bộ các biến thể sai dấu của chữ NỮ (NỬ, NỨ, NỰ, NU, NÚ...).
+    1. Chuẩn hóa về 'Nam' hoặc 'Nữ' (Title Case theo đúng quy chuẩn thẻ CCCD gắn chip).
+    2. Đọc trực tiếp từ text nhận diện VietOCR của trường Giới tính.
+    3. Hỗ trợ đối chiếu chéo với Số CCCD (chữ số thứ 4: Chẵn là Nam, Lẻ là Nữ) khi text mờ/thiếu.
     """
-    # 1. Kiểm tra đối chiếu chéo qua số CCCD
+    g = normalize_vietnamese_text(raw_gender).strip()
+    g_upper = g.upper()
+
+    female_variants = ["NỮ", "NỬ", "NỨ", "NỰ", "NỪ", "NƯ", "NU", "NÚ", "NŨ", "NÜ", "NW", "FEMALE", "F"]
+    male_variants = ["NAM", "AM", "NAN", "MAM", "NA", "MALE", "M"]
+
+    # 1. Nhận diện từ text thực tế trên ảnh thẻ
+    detected_gender = None
+    if any(k in g_upper for k in female_variants):
+        detected_gender = "Nữ"
+    elif any(k in g_upper for k in male_variants):
+        detected_gender = "Nam"
+    elif g_upper.startswith("N") and "M" not in g_upper:
+        detected_gender = "Nữ"
+
+    # 2. Đối chiếu chéo qua số CCCD (chữ số thứ 4 quy định thế kỷ & giới tính)
     clean_id = re.sub(r'[^0-9]', '', str(id_number))
-    if len(clean_id) >= 4:
-        gender_code = int(clean_id[3])
-        # 0, 2, 4, 6, 8 là NAM; 1, 3, 5, 7, 9 là NỮ
-        return "NAM" if gender_code % 2 == 0 else "NỮ"
+    id_gender = None
+    if len(clean_id) == 12:
+        try:
+            gender_code = int(clean_id[3])
+            # 0, 2, 4, 6, 8 là Nam; 1, 3, 5, 7, 9 là Nữ
+            id_gender = "Nam" if gender_code % 2 == 0 else "Nữ"
+        except Exception:
+            id_gender = None
 
-    # 2. Xử lý text thô nếu không có số CCCD
-    g = normalize_vietnamese_text(raw_gender).upper()
+    # Nếu OCR đọc rõ ràng "Nam" hoặc "Nữ" thì ưu tiên kết quả OCR thực tế trên thẻ
+    if detected_gender:
+        return detected_gender
 
-    female_variants = ["NỮ", "NỬ", "NỨ", "NỰ", "NỪ", "NƯ", "NU", "NÚ", "NŨ", "NÜ", "NW"]
-    if any(k in g for k in female_variants):
-        return "NỮ"
+    # Nếu OCR text rỗng hoặc mờ, dự phòng sang chữ số thứ 4 của CCCD
+    if id_gender:
+        return id_gender
 
-    male_variants = ["NAM", "AM", "NAN", "MAM", "NA"]
-    if any(k in g for k in male_variants):
-        return "NAM"
-
-    if g.startswith("N") and "M" not in g:
-        return "NỮ"
-
-    return "NAM"
+    return "Nam"
 
 
 def _parse_date_components(text: str):

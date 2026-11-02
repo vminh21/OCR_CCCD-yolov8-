@@ -136,13 +136,84 @@ export async function apiGetCorrections() {
 }
 
 // 4. OCR & Camera Probe API
-export async function apiPredictImage(fileOrBlob, inputSource = 'IMAGE') {
+export function getUserAIKey() {
+  return localStorage.getItem('cccd_user_ai_key') || '';
+}
+
+export function setUserAIKey(key, provider = 'gemini') {
+  if (key) {
+    localStorage.setItem('cccd_user_ai_key', key.trim());
+    localStorage.setItem('cccd_user_ai_provider', provider);
+  } else {
+    localStorage.removeItem('cccd_user_ai_key');
+  }
+}
+
+export function getUserAIProvider() {
+  return localStorage.getItem('cccd_user_ai_provider') || 'gemini';
+}
+
+export function removeUserAIKey() {
+  localStorage.removeItem('cccd_user_ai_key');
+}
+
+export async function apiGetEvaluateStatus() {
+  const res = await apiRequest('/predict/evaluate-status', { method: 'GET' });
+  return res;
+}
+
+export async function apiTestEvaluateKey(apiKey = '', provider = 'gemini') {
+  const formData = new FormData();
+  if (apiKey) formData.append('api_key', apiKey.trim());
+  formData.append('provider', provider);
+
+  const res = await apiRequest('/predict/evaluate-test-key', {
+    method: 'POST',
+    body: formData,
+  });
+  return res;
+}
+
+export async function apiEvaluateOnDemand(fileOrBlob, localData) {
+  const formData = new FormData();
+  formData.append('file', fileOrBlob);
+  formData.append('local_data_json', JSON.stringify(localData));
+
+  const userKey = getUserAIKey();
+  const provider = getUserAIProvider();
+  const headers = {};
+  if (userKey) {
+    headers['X-AI-API-Key'] = userKey;
+  }
+  headers['X-AI-Provider'] = provider;
+
+  const res = await apiRequest('/predict/evaluate-on-demand', {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  return res;
+}
+
+export async function apiPredictImage(fileOrBlob, inputSource = 'IMAGE', evaluateWithAi = false) {
   const formData = new FormData();
   formData.append('file', fileOrBlob, fileOrBlob.name || 'cccd_upload.jpg');
   formData.append('input_source', inputSource);
+  if (evaluateWithAi) {
+    formData.append('evaluate_with_ai', 'true');
+  }
+
+  const userKey = getUserAIKey();
+  const provider = getUserAIProvider();
+  const headers = {};
+  if (userKey) {
+    headers['X-AI-API-Key'] = userKey;
+  }
+  headers['X-AI-Provider'] = provider;
 
   const res = await apiRequest('/predict/image', {
     method: 'POST',
+    headers,
     body: formData,
   });
   return res;
@@ -158,3 +229,4 @@ export async function apiProbeCamera(fileOrBlob) {
   });
   return res;
 }
+
