@@ -1,234 +1,261 @@
----
-title: CCCD OCR
-emoji: 🪪
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-sdk_version: 5.20.0
-app_file: app.py
-pinned: false
-license: apache-2.0
-startup_duration_timeout: 30m
----
-
-# 🪪 CCCD OCR — Hệ Thống Nhận Diện & Trích Xuất Thẻ Căn Cước Công Dân
+# 🪪 CCCD OCR — Trích xuất thông tin Căn cước công dân Việt Nam
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-00FFFF?style=for-the-badge&logo=yolo&logoColor=black)
-![VietOCR](https://img.shields.io/badge/VietOCR-Transformer-FF6B35?style=for-the-badge)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![OpenCV](https://img.shields.io/badge/OpenCV-4.10%2B-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite3-Embedded-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
-![UI Design](https://img.shields.io/badge/UI-Facebook_Design_System-1877F2?style=for-the-badge&logo=facebook&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-00BFFF?style=flat-square)
+![VietOCR](https://img.shields.io/badge/VietOCR-VGG--Transformer-FF6B35?style=flat-square)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?style=flat-square&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React_19-Vite-61DAFB?style=flat-square&logo=react&logoColor=black)
+![DB](https://img.shields.io/badge/PostgreSQL%20%7C%20SQLite-SQLAlchemy-336791?style=flat-square&logo=postgresql&logoColor=white)
 
-**Giải pháp Trích xuất Thông tin Thẻ Căn cước công dân (CCCD) Việt Nam Tự động hóa Toàn diện**  
-Tích hợp AI SOTA: Phát hiện 2 giai đoạn YOLOv8, Nắn phối cảnh 4 góc, Tinh chỉnh ảnh thích ứng, VietOCR Transformer, Quét trực tiếp bằng Camera WebRTC & Quản trị dữ liệu hồ sơ.
+Hệ thống nhận diện và trích xuất tự động **8 trường thông tin** trên mặt trước thẻ CCCD gắn chip,
+gồm pipeline **YOLOv8 hai giai đoạn + VietOCR**, quét trực tiếp bằng camera, quản lý hồ sơ và thẩm định độ chính xác bằng AI.
 
-[🚀 Hướng Dẫn Nhanh](#-cài-đặt--khởi-chạy) • [✨ Tính Năng Nổi Bật](#-tính-năng-nổi-bật) • [🏗️ Kiến Trúc Pipeline](#️-kiến-trúc-pipeline-ai) • [📖 Tài Liệu Chi Tiết](PIPELINE_DOCUMENTATION.md)
+[Tính năng](#-tính-năng) • [Pipeline](#-pipeline-xử-lý) • [Cài đặt](#-cài-đặt) • [API](#-api) • [Cấu trúc](#-cấu-trúc-thư-mục) • [Tài liệu](#-tài-liệu)
 
 </div>
 
 ---
 
-## 📖 Mục Lục
-- [Giới Thiệu](#-giới-thiệu)
-- [Tính Năng Nổi Bật](#-tính-năng-nổi-bật)
-- [Kiến Trúc Pipeline AI](#️-kiến-trúc-pipeline-ai)
-- [Cài Đặt & Khởi Chạy](#-cài-đặt--khởi-chạy)
-- [Giao Diện Người Dùng (Facebook Style)](#-giao-diện-người-dùng)
-- [Cấu Trúc Thư Mục](#-cấu-trúc-thư-mục)
-- [Tài Khoản Thử Nghiệm](#-tài-khoản-thử-nghiệm)
-- [Giấy Phép & Đóng Góp](#-giấy-phép)
+## ✨ Tính năng
+
+| Nhóm | Mô tả |
+|---|---|
+| **Nhận diện** | Phát hiện thẻ + 4 góc (YOLOv8 stage 1), nắn phối cảnh, tự xoay đúng chiều (0°/90°/180°/270° và ảnh nghiêng) |
+| **Trích xuất** | Định vị 8 trường (YOLOv8 stage 2) → tăng cường ảnh (CLAHE, khử nhiễu, làm nét) → VietOCR → chuẩn hóa & kiểm tra bằng regex |
+| **Ảnh chân dung** | Tự động cắt ảnh chân dung chủ thẻ |
+| **Camera** | Quét trực tiếp qua trình duyệt (WebRTC), kiểm tra thời gian thực: ✅ CCCD mặt trước / ⚠️ mặt sau / ❌ không phải CCCD; tự chụp khi thẻ ổn định hoặc bấm <kbd>Space</kbd> |
+| **Quản lý** | Đăng ký / đăng nhập JWT, lịch sử quét, sửa / xóa kết quả, xuất PDF |
+| **Thống kê** | Tổng quan lượt quét, nhân khẩu học (giới tính, tỉnh thành, độ tuổi), chất lượng AI theo từng trường |
+| **AI Oracle** | Đối chiếu kết quả OCR với Gemini / OpenAI để chấm độ chính xác (tùy chọn, cần API key) |
+
+**8 trường trích xuất:** Số CCCD · Họ và tên · Ngày sinh · Giới tính · Quốc tịch · Quê quán · Nơi thường trú · Có giá trị đến.
 
 ---
 
-## 🌟 Giới Thiệu
-
-Dự án **CCCD OCR** cung cấp giải pháp nhận dạng ký tự quang học (OCR) và xác thực eKYC thông minh dành cho thẻ Căn cước công dân (CCCD) gắn chip và mã vạch của Việt Nam. 
-
-Hệ thống giải quyết các bài toán thực tế phức tạp:
-- Ảnh chụp bị nghiêng góc, méo phối cảnh, ánh sáng không đều hoặc bóng mờ.
-- Thẻ bị xoay 90°, 180°, 270°.
-- Phân biệt chính xác giữa CCCD mặt trước, CCCD mặt sau và các loại thẻ khác (thẻ sinh viên, bằng lái xe, thẻ ngân hàng).
-- Trích xuất chữ tiếng Việt có dấu với độ chính xác cao bằng Transformer.
-- Bóc tách tự động ảnh chân dung chủ thẻ để phục vụ đối soát sinh trắc học eKYC.
-
----
-
-## ✨ Tính Năng Nổi Bật
-
-### 1. 🤖 Pipeline AI 2-Stage SOTA
-- **Stage 1 (Phát hiện thẻ & 4 góc)**: Nhận diện vùng thẻ và tọa độ 4 góc bằng mô hình YOLOv8, tự động nắn thẳng phối cảnh (*Perspective Transform*) và cắt ảnh thẻ về kích thước chuẩn.
-- **Tự động định hướng (Auto-Orientation)**: Tự động phân tích và xoay ảnh đúng chiều thẳng đứng nếu ảnh bị nghiêng hoặc chụp ngược.
-- **Stage 2 (Bóc tách 8 trường thông tin)**: Định vị chính xác các trường: Số CCCD, Họ và tên, Ngày sinh, Giới tính, Quốc tịch, Quê quán, Nơi thường trú, Có giá trị đến và vùng Chân dung avatar.
-- **Xử lý ảnh tăng cường (Adaptive Enhancer)**: Khử nhiễu, cân bằng sáng cục bộ CLAHE, tăng độ sắc nét vùng chữ trước khi OCR.
-- **VietOCR Transformer**: Mô hình deep learning chuyên sâu tiếng Việt, nhận diện chuẩn xác dấu câu tiếng Việt phức tạp.
-
-### 2. 📸 Quét & Nhận Diện Trực Tiếp Bằng Camera
-- **Tích hợp WebRTC**: Mở camera trực tiếp trên trình duyệt máy tính hoặc điện thoại mà không cần phần mềm phụ trợ.
-- **Kiểm định thẻ thông minh theo thời gian thực (Real-time Validation)**:
-  - Khung viền **Xanh Lá**: Đã nhận diện đúng CCCD mặt trước hợp lệ và đủ độ nét.
-  - Khung viền **Vàng**: Nhắc nhở khi đưa nhầm mặt sau thẻ CCCD.
-  - Khung viền **Đỏ**: Cảnh báo khi đưa thẻ không phải CCCD (thẻ sinh viên, thẻ ngân hàng,...).
-- **Chế độ chụp kép (Dual Capture)**:
-  - Tự động chụp (*Auto Trigger*) khi thẻ ổn định và chuẩn góc.
-  - Chụp thủ công bằng nút bấm hoặc phím tắt <kbd>Space</kbd> (phím cách).
-
-### 3. 🎨 Giao Diện Facebook Design System
-- Thiết kế hiện đại, tinh giản theo ngôn ngữ thiết kế của **Facebook**:
-  - Tông màu chủ đạo: Xanh Facebook `#1877F2`, nền canvas xám `#F0F2F5`, thẻ card trắng tinh tế.
-  - Layout phẳng, góc bo gọn gàng 6px - 8px, loại bỏ hoàn toàn các bo góc tròn quá đà.
-  - Trực quan hóa kết quả: Đóng khung màu từng trường dữ liệu trên ảnh gốc kèm độ tin cậy (*confidence score*).
-
-### 4. 🗄️ Quản Lý Hồ Sơ & Cơ Sở Dữ Liệu
-- Lưu trữ toàn bộ lịch sử quét, ảnh thẻ nắn chỉnh, ảnh chân dung và metadata vào cơ sở dữ liệu SQLite.
-- Tìm kiếm nhanh theo số CCCD, họ tên, ngày quét.
-- Xem chi tiết hồ sơ với modal trực quan, tải ảnh chân dung và xuất dữ liệu sang JSON.
-- Hệ thống xác thực người dùng bảo mật với JWT (Đăng ký, Đăng nhập, Đổi mật khẩu).
-
----
-
-## 🏗️ Kiến Trúc Pipeline AI
+## 🏗️ Pipeline xử lý
 
 ```mermaid
 flowchart TD
-    A["Ảnh đầu vào (Upload / Camera WebRTC)"] --> B["Pre-check: Phân loại thẻ & Chiều ảnh"]
-    B -->|Không phải CCCD| B1["Cảnh báo: Thẻ không hợp lệ"]
-    B -->|Mặt sau| B2["Cảnh báo: Đây là mặt sau CCCD"]
-    B -->|CCCD Mặt trước| C["YOLOv8 Stage 1: Card & Corner Detection"]
-    C --> D["Perspective Transform: Nắn thẳng phối cảnh"]
-    D --> E["YOLOv8 Stage 2: Field & Face Detection"]
-    E --> F["Adaptive Image Enhancer (CLAHE, Denoise, Sharpness)"]
-    E --> G["Crop Face Avatar"]
-    F --> H["VietOCR Transformer Engine"]
-    H --> I["Post-processing & Regex Validator"]
-    G --> J["Kết quả chuẩn hóa JSON & Lưu Database"]
+    A["Ảnh đầu vào (upload / camera)"] --> B["Kiểm tra chất lượng & phân loại thẻ"]
+    B -->|Không phải CCCD| B1["❌ Từ chối"]
+    B -->|Mặt sau| B2["⚠️ Yêu cầu mặt trước"]
+    B -->|CCCD mặt trước| C["YOLOv8 stage 1: thẻ + 4 góc"]
+    C --> D["Nắn phối cảnh & xoay đúng chiều"]
+    D --> E["YOLOv8 stage 2: 8 trường + chân dung"]
+    E --> F["Tăng cường ảnh (CLAHE, denoise, sharpen)"]
+    E --> G["Cắt ảnh chân dung"]
+    F --> H["VietOCR (VGG-Transformer)"]
+    H --> I["Hậu xử lý & regex validator"]
+    G --> J["Kết quả JSON → lưu CSDL"]
     I --> J
 ```
 
+Chi tiết từng bước: [`docs/reports/PIPELINE_DOCUMENTATION.md`](docs/reports/PIPELINE_DOCUMENTATION.md).
+
 ---
 
-## 🚀 Cài Đặt & Khởi Chạy
+## 🧰 Công nghệ
 
-### Yêu Cầu Môi Trường
-- **Hệ điều hành**: macOS / Linux / Windows
-- **Python**: Phiên bản `>= 3.9`
-- **Bộ nhớ RAM**: Tối thiểu 4GB (Khuyến nghị 8GB)
+| Thành phần | Công nghệ |
+|---|---|
+| Phát hiện đối tượng | Ultralytics YOLOv8 (2 model tự huấn luyện) |
+| OCR | VietOCR — VGG-Transformer |
+| Xử lý ảnh | OpenCV, Pillow, NumPy |
+| Backend | FastAPI, Uvicorn, SQLAlchemy, PyJWT, bcrypt |
+| CSDL | PostgreSQL (qua Docker) hoặc **SQLite tự động** khi không có PostgreSQL |
+| Frontend | React 19 + Vite, jsPDF |
 
-### Bước 1 — Clone Mã Nguồn
+---
+
+## 🚀 Cài đặt
+
+### Yêu cầu
+- Python **3.9+**
+- Node.js **18+** (chỉ cần nếu build lại frontend)
+- RAM ≥ 4 GB (khuyến nghị 8 GB)
+- Docker (tùy chọn, để chạy PostgreSQL)
+
+### 1. Clone & tạo môi trường ảo
+
 ```bash
 git clone https://github.com/vminh21/OCR_CCCD-yolov8-.git
 cd OCR_CCCD-yolov8-
-```
 
-### Bước 2 — Thiết Lập Môi Trường Ảo
-```bash
-# Tạo môi trường ảo
 python3 -m venv .venv
-
-# Kích hoạt trên macOS/Linux
-source .venv/bin/activate
-
-# Kích hoạt trên Windows
-# .venv\Scripts\activate
-```
-
-### Bước 3 — Cài Đặt Thư Viện Dependencies
-```bash
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Bước 4 — Cấu Hình Trọng Số (Weights)
-Đảm bảo các file trọng số được đặt đúng trong thư mục `weights/`:
+### 2. Cấu hình biến môi trường
+
+```bash
+cp .env.example .env
+```
+
+| Biến | Bắt buộc | Ý nghĩa |
+|---|---|---|
+| `DATABASE_URL` | Không | Chuỗi kết nối PostgreSQL. Bỏ trống hoặc không kết nối được → tự dùng SQLite `ocr_cccd.db` |
+| `JWT_SECRET_KEY` | **Nên đổi** | Khóa ký token đăng nhập |
+| `GEMINI_API_KEY` / `OPENAI_API_KEY` | Không | Bật tính năng AI Oracle thẩm định độ chính xác |
+| `ROBOFLOW_API_KEY` | Không | Chỉ dùng cho `download_data.py` khi tải dataset để huấn luyện |
+
+> ⚠️ Không bao giờ commit file `.env` — file này đã nằm trong `.gitignore`.
+
+### 3. Trọng số model
+
+Hai model YOLOv8 đã có sẵn trong repo:
+
 ```text
 weights/
-├── yolov8_cccd_detect.pt       # Mô hình phát hiện thẻ & 4 góc
-├── yolov8_fields.pt            # Mô hình bóc tách các trường dữ liệu
-└── (VietOCR Transformer tải tự động khi chạy lần đầu)
+├── yolov8_cccd_detect.pt   # Stage 1: phát hiện thẻ & 4 góc
+└── yolov8_fields.pt        # Stage 2: phát hiện 8 trường + chân dung
 ```
 
-### Bước 5 — Khởi Động Ứng Dụng
+Trọng số VietOCR được tải tự động ở lần chạy đầu tiên (hoặc đặt sẵn tại `weights/vgg_transformer.pth`).
+
+### 4. (Tùy chọn) Chạy PostgreSQL bằng Docker
+
 ```bash
+docker compose up -d
+```
+
+- PostgreSQL: `localhost:5432` — schema khởi tạo từ `docker/init.sql`
+- pgAdmin: <http://localhost:5050>
+
+### 5. Khởi động
+
+```bash
+./run.sh            # tự build frontend nếu chưa có, giải phóng cổng 8000, rồi chạy server
+# hoặc
 python3 main.py
 ```
-Hoặc sử dụng bash script:
+
+Mở trình duyệt tại **<http://localhost:8000>**.
+
+> 📷 Dùng `localhost` hoặc `127.0.0.1`, **không** dùng `0.0.0.0` — trình duyệt sẽ chặn camera trên địa chỉ không bảo mật.
+
+**Tài khoản demo (chỉ cho môi trường local):** `minh_final` / `password123` — được tạo tự động ở lần chạy đầu. Có thể đăng ký tài khoản mới ngay trên giao diện.
+
+### Phát triển frontend
+
 ```bash
-./run.sh
+cd frontend
+npm install
+npm run dev         # http://localhost:5173, proxy /api, /predict, /media → :8000
+npm run build       # build vào frontend/dist (backend tự phục vụ bản build này)
 ```
 
-👉 Mở trình duyệt và truy cập: **`http://localhost:8000`**
+---
+
+## 🔌 API
+
+Tài liệu tương tác (Swagger) có tại **<http://localhost:8000/docs>** khi server đang chạy.
+
+| Method | Endpoint | Mô tả |
+|---|---|---|
+| `POST` | `/api/auth/register` | Đăng ký |
+| `POST` | `/api/auth/login` | Đăng nhập, trả JWT |
+| `POST` | `/api/auth/logout` | Đăng xuất |
+| `POST` | `/api/auth/change-password` | Đổi mật khẩu |
+| `GET` | `/api/auth/me` | Thông tin người dùng hiện tại |
+| `POST` | `/predict/image` | Trích xuất thông tin từ ảnh / video |
+| `POST` | `/predict/camera-probe` | Kiểm tra khung hình camera theo thời gian thực |
+| `GET` | `/predict/evaluate-status` | Trạng thái cấu hình API key AI Oracle |
+| `POST` | `/predict/evaluate-test-key` | Kiểm tra API key |
+| `POST` | `/predict/evaluate-on-demand` | Thẩm định độ chính xác một kết quả |
+| `GET` | `/api/history` | Lịch sử quét |
+| `GET` | `/api/results` | Danh sách kết quả CCCD |
+| `GET / PUT / DELETE` | `/api/results/{id}` | Xem / sửa / xóa một kết quả |
+| `GET` | `/api/statistics` | Thống kê tổng quan |
+| `GET` | `/api/statistics/demographics` | Thống kê nhân khẩu học |
+| `GET` | `/api/statistics/ai-quality` | Chất lượng AI theo từng trường |
+| `GET` | `/api/corrections` | Lịch sử đánh giá & chỉnh sửa |
 
 ---
 
-## 🧪 Đánh Giá Hiệu Năng (Benchmark)
-
-Hệ thống tích hợp sẵn script chạy batch test để đo lường độ chính xác và tốc độ xử lý:
-```bash
-python3 test_batch.py
-```
-- **Tốc độ trung bình**: ~0.65s - 0.95s / ảnh (chạy trên CPU) và ~0.15s - 0.25s / ảnh (chạy trên GPU CUDA / Apple Silicon MPS).
-- **Độ chính xác nhận diện trường**: > 98.5% trên tập dữ liệu thử nghiệm chuẩn.
-
----
-
-## 🎨 Giao Diện Người Dùng
-
-Giao diện ứng dụng được chia thành các khu vực chức năng khoa học:
-1. **Màn hình Đăng nhập / Đăng ký**: Giao diện đăng nhập phẳng chuẩn Facebook với form bảo mật.
-2. **Tab 1: Nhận diện & Trích xuất**: Tải ảnh kéo-thả hoặc mở Camera trực tiếp. Kết quả hiển thị tức thì bên phải với ảnh bóc tách chân dung.
-3. **Tab 2: Lịch sử & Hồ sơ**: Danh sách các lần quét đã lưu, hỗ trợ tìm kiếm theo từ khóa và xem chi tiết hồ sơ.
-4. **Tab 3: Thống kê & Phân tích**: Biểu đồ phân bố giới tính, tỷ lệ thành công và các chỉ số đo lường hiệu quả.
-
----
-
-## 🗂️ Cấu Trúc Thư Mục
+## 🗂️ Cấu trúc thư mục
 
 ```text
 OCR_CCCD-yolov8-/
-├── config/                     # Cấu hình hệ thống & mẫu trường dữ liệu
-│   ├── settings.py             # Cấu hình ngưỡng tin cậy, đường dẫn, tham số
-│   ├── field_templates.py      # Định nghĩa regex & nhãn trường thẻ
-│   └── vgg_transformer.yml     # Cấu hình kiến trúc VietOCR Transformer
-├── src/                        # Module mã nguồn lõi
-│   ├── core/                   # Pipeline xử lý, enhancer, validator, quality check
-│   ├── detectors/              # YOLOv8 card detector & field detector
-│   ├── ocr/                    # Bộ máy VietOCR & tiền xử lý dải chữ
-│   ├── database/               # Quản lý SQLite database & repository
-│   └── api/                    # Router endpoints FastAPI
-├── docs/                       # Tài liệu báo cáo & sơ đồ thiết kế
-│   ├── reports/                # Báo cáo học phần & tài liệu kỹ thuật (.docx, .md)
-│   ├── diagrams/               # Sơ đồ lớp, sơ đồ trạng thái (.drawio, .png, .svg)
-│   └── scripts/                # Script tự động sinh sơ đồ
-├── docker/                     # Cấu hình containerization
-├── docker-compose.yml          # Triển khai nhanh với Docker Compose
-├── main.py                     # Ứng dụng chính (FastAPI Server + Web UI)
-├── test_batch.py               # Kịch bản kiểm thử hiệu năng hàng loạt
-├── requirements.txt            # Danh sách dependencies Python
-├── .gitignore                  # Cấu hình loại bỏ file rác, tệp Word, weight lớn
-└── README.md                   # Tài liệu hướng dẫn sử dụng
+├── backend/                  # Ứng dụng FastAPI (mã nguồn chính)
+│   ├── main.py               # Khởi tạo app, mount router & frontend build
+│   ├── api/                  # Router: auth, ocr (/predict), results, stats
+│   ├── core/                 # Pipeline, enhancer, validator, quality check, avatar, AI evaluator
+│   ├── detectors/            # YOLOv8 card detector & field detector
+│   ├── ocr/                  # VietOCR engine
+│   └── database/             # SQLAlchemy models, CRUD, kết nối, bảo mật
+├── frontend/                 # React + Vite
+│   └── src/
+│       ├── tabs/             # Scan, Results, Statistics, AI Accuracy, Profile
+│       ├── components/       # Camera, Auth, Edit, AI Comparison modal…
+│       └── services/api.js   # Gọi API backend
+├── config/                   # settings.py (ngưỡng, đường dẫn), field templates, regex, cấu hình VietOCR
+├── weights/                  # Trọng số YOLOv8
+├── scripts/                  # Chuẩn bị dữ liệu, augment, huấn luyện, benchmark, visualize
+├── tests/                    # Unit test & test tích hợp
+├── docs/                     # Tài liệu pipeline, sơ đồ lớp / trạng thái
+├── docker/init.sql           # Schema PostgreSQL
+├── docker-compose.yml        # PostgreSQL + pgAdmin
+├── download_data.py          # Tải dataset từ Roboflow
+├── main.py                   # Entry point chạy server
+├── run.sh                    # Script khởi chạy nhanh
+└── src/                      # Phiên bản pipeline cũ (dùng bởi test_batch.py)
 ```
 
 ---
 
-## 🔑 Tài Khoản Thử Nghiệm
+## 🧪 Kiểm thử & huấn luyện
 
-Hệ thống có sẵn tài khoản mẫu để trải nghiệm nhanh:
-- **Tên đăng nhập**: `minh_final`
-- **Mật khẩu**: `password123`
+```bash
+# Unit test bộ chấm điểm AI
+python -m unittest discover -s tests -p "test_ai_evaluator.py"
 
-*(Bạn cũng có thể dễ dàng đăng ký tài khoản mới trực tiếp từ màn hình đăng nhập).*
+# Test các quy tắc camera / toàn hệ thống (gọi trực tiếp app qua TestClient)
+python tests/test_camera_rules.py
+python tests/test_full_system.py
+
+# Chạy pipeline hàng loạt trên thư mục data/input
+python test_batch.py
+```
+
+Huấn luyện lại model (xem các script trong `scripts/`):
+
+```bash
+python download_data.py              # cần ROBOFLOW_API_KEY trong .env
+python scripts/prepare_detect_dataset.py
+python scripts/detect_train.py       # stage 1
+python scripts/train_fields.py       # stage 2
+```
 
 ---
 
-## 📄 Giấy Phép
+## 🔒 Dữ liệu & quyền riêng tư
 
-Dự án được phát hành và duy trì cho mục đích học tập, nghiên cứu và ứng dụng công nghệ Computer Vision & OCR tại Việt Nam.
+Ảnh CCCD là **dữ liệu cá nhân nhạy cảm**. Repo **không** chứa ảnh thẻ thật hay kết quả OCR thật:
+
+- `data/`, `input/`, `output/`, `results/`, `*.db`, `.env` đều nằm trong `.gitignore`.
+- Dữ liệu mẫu trong test / tài liệu là dữ liệu giả.
+- Khi đóng góp, **không** commit ảnh thẻ, ảnh chân dung hay file CSDL.
+
+---
+
+## 📚 Tài liệu
+
+- [`docs/reports/PIPELINE_DOCUMENTATION.md`](docs/reports/PIPELINE_DOCUMENTATION.md) — chi tiết pipeline & kết quả đánh giá
+- [`docs/TAI_LIEU_VAN_DAP_PIPELINE_CCCD.md`](docs/TAI_LIEU_VAN_DAP_PIPELINE_CCCD.md) — thông số huấn luyện, AI Oracle, hỏi đáp
+- [`docs/diagrams/`](docs/diagrams/) — sơ đồ lớp & sơ đồ trạng thái
+
+---
+
+## 📄 Giấy phép
+
+Dự án phục vụ mục đích học tập và nghiên cứu Computer Vision / OCR. Phát hành theo giấy phép Apache-2.0.
 
 <div align="center">
 
-Được phát triển với tâm huyết bởi **[vminh21](https://github.com/vminh21)** 🇻🇳
+Phát triển bởi **[vminh21](https://github.com/vminh21)**
 
 </div>
